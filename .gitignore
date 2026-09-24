@@ -1,0 +1,13 @@
+.DS_Store
+bin/
+dist/
+node_modules/
+coverage/
+.agent-monitor-data/
+.gocache/
+agent-monitor
+server
+cdk.out/
+infra/cdk.out/
+infra/node_modules/
+infra/package-lock.json

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>agent-monitor</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <h1>agent-monitor</h1>
+          <p id="last-updated">loading...</p>
+        </div>
+        <button id="refresh" type="button">Refresh</button>
+      </header>
+
+      <section class="metrics" aria-label="summary">
+        <article>
+          <span>Events</span>
+          <strong id="metric-events">0</strong>
+        </article>
+        <article>
+          <span>Running</span>
+          <strong id="metric-running">0</strong>
+        </article>
+        <article>
+          <span>Failures</span>
+          <strong id="metric-failed">0</strong>
+        </article>
+        <article>
+          <span>Questions</span>
+          <strong id="metric-questions">0</strong>
+        </article>
+      </section>
+
+      <section class="workbench">
+        <aside class="costs">
+          <h2>Usage</h2>
+          <dl>
+            <div>
+              <dt>Cost</dt>
+              <dd id="metric-cost">$0.00</dd>
+            </div>
+            <div>
+              <dt>Tokens</dt>
+              <dd id="metric-tokens">0</dd>
+            </div>
+            <div>
+              <dt>Tool calls</dt>
+              <dd id="metric-tools">0</dd>
+            </div>
+          </dl>
+          <p id="last-message"></p>
+        </aside>
+
+        <section class="timeline">
+          <h2>Timeline</h2>
+          <div id="events" class="events" aria-live="polite"></div>
+        </section>
+      </section>
+    </main>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
+

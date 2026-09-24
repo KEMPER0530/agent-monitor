@@ -1,0 +1,21 @@
+{
+  "name": "agent-monitor-infra",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc --noEmit",
+    "synth": "cdk synth",
+    "deploy": "cdk deploy --require-approval never",
+    "deploy:local": "cdklocal deploy --require-approval never -c localstack=true"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "aws-cdk": "^2.150.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.3"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.150.0",
+    "constructs": "^10.3.0"
+  }
+}
