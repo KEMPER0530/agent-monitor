@@ -4,13 +4,10 @@
 
 ローカルでは軽量な Go サーバーと JSONL で動作し、AWS では CloudFront、S3、API Gateway、Lambda、DynamoDB、Cognito を利用して公開できます。
 
-## 本番URL
+## 公開範囲
 
-```text
-https://s3-agent-monitor.kemper0530.com
-```
-
-ダッシュボードは Cognito Hosted UI でログインしたユーザーだけが利用できます。
+このREADMEには本番URL、Cognitoの識別子、API Key、AWSアカウント固有の値を記載しません。
+デプロイ先や認証情報は、環境変数、GitHub Secrets、AWS側のStack Outputで管理します。
 
 ## AWS構成図
 
@@ -23,13 +20,13 @@ flowchart LR
     cloudfront --> s3["S3<br/>Dashboard"]
     cloudfront --> apigw["API Gateway<br/>/api/*"]
 
-    user --> cognito["Cognito<br/>nuxt-mail-demo"]
+    user --> cognito["Cognito"]
     cognito -- "JWT<br/>GET /api/snapshot" --> apigw
 
     codexAgent["Codex / Claude<br/>自動送信"] --> apiKey["API Key"]
     apiKey -- "x-api-key<br/>POST /api/events" --> apigw
 
-    apigw --> lambda["Lambda<br/>agent-monitor-ingest"]
+    apigw --> lambda["Lambda"]
     lambda --> codexTable["DynamoDB<br/>Codex events"]
     lambda --> claudeTable["DynamoDB<br/>Claude events"]
 
@@ -40,13 +37,7 @@ flowchart LR
     deployapp --> cloudfront
 ```
 
-主要な識別子:
-
-- 公開URL: `https://s3-agent-monitor.kemper0530.com`
-- Cognito User Pool: `nuxt-mail-demo` / `ap-northeast-1_7da4pYlPc`
-- Codexテーブル: `agent-monitor-codex-events`
-- Claudeテーブル: `agent-monitor-claude-events`
-- Ingest Lambda: `agent-monitor-ingest`
+実際のURL、User Pool、API Key、テーブル名などの環境固有値は公開READMEには載せず、AWS CDK context、GitHub Secrets、またはローカルの `.agent-monitor.env` で管理します。
 
 ## ローカル起動
 
@@ -112,21 +103,17 @@ Go 側はクリーンアーキテクチャを意識して、責務を小さく�
 
 ## AWS認証
 
-ダッシュボードは既存の Cognito ユーザープールを利用します。
+ダッシュボード参照とエージェントからのイベント登録は、用途ごとに認証方式を分けます。
 
-- ユーザープール名: `nuxt-mail-demo`
-- ユーザープールID: `ap-northeast-1_7da4pYlPc`
-- Hosted UI: `https://agent-monitor-kemper0530.auth.ap-northeast-1.amazoncognito.com`
-- API Gateway: `/api/*` に Cognito JWT が必要
+- ダッシュボード参照: Cognitoでログインしたユーザーのみ許可
+- イベント登録: エージェント用のAPI Keyを持つクライアントのみ許可
+- 認証情報: READMEへ記載せず、AWSとローカル環境変数で管理
 
-静的HTMLは CloudFront から配信されますが、ダッシュボードの JavaScript は未ログイン時に Cognito Hosted UI へリダイレクトします。API データは Cognito Authorizer により保護されます。
+静的HTMLはCloudFrontから配信されますが、画面表示時にCognito認証を要求します。監視イベントの登録APIは、ブラウザログインではなくエージェント用API Keyで保護します。
 
 ## DynamoDB分離
 
-Codex と Claude のデータは別テーブルに保存します。
-
-- Codex: `agent-monitor-codex-events`
-- Claude: `agent-monitor-claude-events`
+Codex と Claude のデータは別テーブルに保存します。実際のテーブル名はCDKで管理し、公開READMEには記載しません。
 
 Lambda の有効化フラグは次の2つです。
 
@@ -142,7 +129,7 @@ GET /api/snapshot?agent=claude
 
 ## API認証と呼び出し方法
 
-本番APIは API Gateway の Cognito Authorizer で保護されています。`Authorization` ヘッダーに Cognito の ID トークンを `Bearer` 形式で渡します。
+参照APIはCognito Authorizerで保護されています。ダッシュボードのJavaScriptが、ログイン後に取得したIDトークンを自動で付与します。
 
 ダッシュボードから参照する場合は、Cognito Hosted UI でログインすると `web/app.ts` が ID トークンを取得し、スナップショット取得APIへ自動付与します。
 
@@ -151,44 +138,40 @@ Codexから自動送信する場合は、CognitoログインではなくAPI Gate
 ```bash
 export AGENT_MONITOR_ENABLED=true
 export AGENT_MONITOR_AGENT=codex
-export AGENT_MONITOR_API_URL="https://s3-agent-monitor.kemper0530.com"
-export AGENT_MONITOR_API_KEY="<API Gatewayのingest API key>"
+export AGENT_MONITOR_API_URL="<監視APIのURL>"
+export AGENT_MONITOR_API_KEY="<エージェント登録用API Key>"
 
 go run ./cmd/agent-monitor --type task --status running --title "Codex作業開始" --agent codex
 ```
 
 ローカルでは同じ内容を `.agent-monitor.env` に置くと、`cmd/agent-monitor` が起動時に自動で読み込みます。
 
-API KeyはAWS環境作成後に次のコマンドで取得します。
+API KeyはAWS環境作成後、AWS CLIやコンソールから取得し、GitHub Secretsまたはローカルの `.agent-monitor.env` に保存します。値をREADMEやコミットに含めないでください。
 
 ```bash
 API_KEY_ID=$(aws cloudformation describe-stacks \
-  --stack-name AgentMonitorStack \
-  --region ap-northeast-1 \
+  --stack-name <stack-name> \
+  --region <region> \
   --query "Stacks[0].Outputs[?OutputKey=='IngestApiKeyId'].OutputValue | [0]" \
   --output text)
 
 aws apigateway get-api-key \
   --api-key "$API_KEY_ID" \
   --include-value \
-  --region ap-northeast-1 \
+  --region <region> \
   --query value \
   --output text
 ```
 
-手元からスナップショット取得APIを `curl` する場合は、ブラウザでログイン後のURLフラグメントに含まれる `id_token` を使います。
-
-スナップショット取得:
+手元から確認する場合も、URLやトークンは環境変数に入れて使います。
 
 ```bash
 curl -H "Authorization: Bearer ${AGENT_MONITOR_ID_TOKEN}" \
-  "https://s3-agent-monitor.kemper0530.com/api/snapshot?agent=codex"
+  "${AGENT_MONITOR_API_URL}/api/snapshot?agent=codex"
 ```
 
-イベント登録APIを `curl` する場合はAPI Keyを使います。
-
 ```bash
-curl -X POST "https://s3-agent-monitor.kemper0530.com/api/events?agent=codex" \
+curl -X POST "${AGENT_MONITOR_API_URL}/api/events?agent=codex" \
   -H "x-api-key: ${AGENT_MONITOR_API_KEY}" \
   -H "Content-Type: application/json" \
   -d '{"type":"task","status":"running","title":"Codexの進捗確認","agent":"codex"}'
@@ -209,8 +192,14 @@ make test
 ```bash
 cd infra
 npm install
+export AGENT_MONITOR_ZONE_NAME="<Route53のHosted Zone名>"
+export AGENT_MONITOR_DASHBOARD_DOMAIN="<ダッシュボード公開ドメイン>"
+export AGENT_MONITOR_COGNITO_USER_POOL_ID="<既存Cognito User Pool ID>"
+export AGENT_MONITOR_COGNITO_DOMAIN_PREFIX="<Cognito Hosted UIドメインPrefix>"
 npm run synth
 ```
+
+環境固有値は、CDK context、環境変数、GitHub Variablesのいずれかで渡します。公開リポジトリには実値を入れません。
 
 AWS に初回デプロイします。
 
@@ -259,6 +248,18 @@ CloudFront の対応範囲は LocalStack のエディションとバージョン
 必要な GitHub 設定:
 
 - Secret: `AWS_ROLE_TO_ASSUME`
-- Variable: `AWS_REGION` 例: `ap-northeast-1`
+- Variable: `AWS_REGION`
+- Variable: `AGENT_MONITOR_ZONE_NAME`
+- Variable: `AGENT_MONITOR_DASHBOARD_DOMAIN`
+- Variable: `AGENT_MONITOR_COGNITO_USER_POOL_ID`
+- Variable: `AGENT_MONITOR_COGNITO_DOMAIN_PREFIX`
+
+既存リソース名を固定したい場合だけ、次のVariablesも設定します。未設定の場合はCDKが名前を生成します。
+
+- `AGENT_MONITOR_CODEX_EVENTS_TABLE_NAME`
+- `AGENT_MONITOR_CLAUDE_EVENTS_TABLE_NAME`
+- `AGENT_MONITOR_INGEST_FUNCTION_NAME`
+- `AGENT_MONITOR_INGEST_API_KEY_NAME`
+- `AGENT_MONITOR_INGEST_USAGE_PLAN_NAME`
 
 `AWS_ROLE_TO_ASSUME` が未設定の場合、テスト後にデプロイジョブはスキップされます。
