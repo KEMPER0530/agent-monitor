@@ -42,14 +42,21 @@ flowchart LR
 export AGENT_MONITOR_ENABLED=true
 ```
 
-2. CLI からイベントを記録します。
+2. ローカルで Codex 用の監視設定を有効にします。
+
+```bash
+export AGENT_MONITOR_AGENT=codex
+touch .agent-monitor
+```
+
+3. CLI からイベントを記録します。
 
 ```bash
 go run ./cmd/agent-monitor --type task --status running --title "MVPを実装" --agent codex --tokens 1200 --tool-calls 4
 go run ./cmd/agent-monitor --type question --status blocked --title "AWSアカウントIDの確認が必要"
 ```
 
-3. ダッシュボードを起動します。
+4. ダッシュボードを起動します。
 
 ```bash
 make run
@@ -117,6 +124,32 @@ API 呼び出し時は `agent=codex` または `agent=claude` を指定できま
 ```text
 GET /api/snapshot?agent=codex
 GET /api/snapshot?agent=claude
+```
+
+## API認証と呼び出し方法
+
+本番APIは API Gateway の Cognito Authorizer で保護されています。`Authorization` ヘッダーに Cognito の ID トークンを `Bearer` 形式で渡します。
+
+ダッシュボードから利用する場合は、Cognito Hosted UI でログインすると `web/app.ts` が ID トークンを取得し、APIリクエストへ自動付与します。
+
+Codexから自動送信する場合は、`AGENTS.md` のルールに従って `cmd/agent-monitor` が実行されます。`AGENT_MONITOR_API_URL` と `AGENT_MONITOR_ID_TOKEN` が設定されていればAWS APIへ送信し、未設定ならローカルJSONLへ保存します。
+
+```bash
+export AGENT_MONITOR_ENABLED=true
+export AGENT_MONITOR_AGENT=codex
+export AGENT_MONITOR_API_URL="https://s3-agent-monitor.kemper0530.com"
+export AGENT_MONITOR_ID_TOKEN="<Cognitoのid_token>"
+
+go run ./cmd/agent-monitor --type task --status running --title "Codex作業開始" --agent codex
+```
+
+手元から `curl` する場合は、ブラウザでログイン後のURLフラグメントに含まれる `id_token` を使います。
+
+スナップショット取得:
+
+```bash
+curl -H "Authorization: Bearer ${AGENT_MONITOR_ID_TOKEN}" \
+  "https://s3-agent-monitor.kemper0530.com/api/snapshot?agent=codex"
 ```
 
 ## テスト
