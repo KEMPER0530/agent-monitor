@@ -44,6 +44,20 @@ func TestParseEnvLine(t *testing.T) {
 	}
 }
 
+// ツール名はカンマ区切りで受け取り、空白と重複を除去します。
+func TestParseList(t *testing.T) {
+	got := parseList("rg, go test, rg,  npm run build ")
+	want := []string{"rg", "go test", "npm run build"}
+	if len(got) != len(want) {
+		t.Fatalf("items = %#v", got)
+	}
+	for index := range want {
+		if got[index] != want[index] {
+			t.Fatalf("items = %#v, want %#v", got, want)
+		}
+	}
+}
+
 // 使用量が未指定でも、ダッシュボードが0固定にならない推定値を付与します。
 func TestApplyUsageDefaultsEstimatesMissingValues(t *testing.T) {
 	event := model.NewEvent(model.EventTask, model.StatusSuccess, "AI Agent Mission Control.")

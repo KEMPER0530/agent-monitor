@@ -38,6 +38,7 @@ func main() {
 	taskID := flag.String("task-id", "", "task id")
 	tokens := flag.Int("tokens", 0, "used tokens")
 	toolCalls := flag.Int("tool-calls", 0, "tool call count")
+	tools := flag.String("tools", "", "comma-separated tool names")
 	costUSD := flag.Float64("cost-usd", 0, "estimated cost in USD")
 	flag.Parse()
 
@@ -53,6 +54,7 @@ func main() {
 	event.TaskID = *taskID
 	event.Tokens = *tokens
 	event.ToolCalls = *toolCalls
+	event.ToolDetails = parseList(envOrDefaultValue(*tools, os.Getenv("AGENT_MONITOR_TOOL_NAMES")))
 	event.CostUSD = *costUSD
 	applyUsageDefaults(&event)
 
@@ -173,6 +175,21 @@ func envOrDefaultValue(value string, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+// parseList は環境変数やCLI引数のカンマ区切りを重複なしの配列へ整えます。
+func parseList(value string) []string {
+	seen := map[string]bool{}
+	var items []string
+	for _, part := range strings.Split(value, ",") {
+		item := strings.TrimSpace(part)
+		if item == "" || seen[item] {
+			continue
+		}
+		seen[item] = true
+		items = append(items, item)
+	}
+	return items
 }
 
 // applyUsageDefaults は明示的な使用量がない場合でも、ダッシュボードへ0以外の推定値を送ります。

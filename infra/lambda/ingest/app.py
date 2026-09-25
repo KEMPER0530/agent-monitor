@@ -53,6 +53,7 @@ def create_event(event):
         "costUsd": Decimal(str(payload.get("costUsd", 0))),
         "tokens": int(payload.get("tokens", 0)),
         "toolCalls": int(payload.get("toolCalls", 0)),
+        "toolDetails": tool_details(payload),
         "createdAt": payload.get("createdAt") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
     if not item["title"]:
@@ -167,8 +168,34 @@ def normalize(item):
         "costUsd": float(item.get("costUsd", 0)),
         "tokens": int(item.get("tokens", 0)),
         "toolCalls": int(item.get("toolCalls", 0)),
+        "toolDetails": normalize_tool_details(item.get("toolDetails", [])),
         "createdAt": item.get("createdAt", ""),
     }
+
+
+# tool_details は複数の入力名を許容し、Lambda保存前に配列へ正規化します。
+def tool_details(payload):
+    return normalize_tool_details(payload.get("toolDetails") or payload.get("tools") or payload.get("toolNames") or [])
+
+
+# normalize_tool_details は既存データやCSV文字列を安全な文字列配列として扱います。
+def normalize_tool_details(value):
+    if isinstance(value, str):
+        raw_items = value.split(",")
+    elif isinstance(value, list):
+        raw_items = value
+    else:
+        raw_items = []
+
+    details = []
+    seen = set()
+    for raw_item in raw_items:
+        item = str(raw_item).strip()
+        if not item or item in seen:
+            continue
+        seen.add(item)
+        details.append(item)
+    return details
 
 
 # Lambda Proxy Integration向けのレスポンス形式へ揃えます。

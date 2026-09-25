@@ -14,6 +14,7 @@ func TestJSONLStoreAppendAndSnapshot(t *testing.T) {
 	event.CostUSD = 0.25
 	event.Tokens = 1200
 	event.ToolCalls = 3
+	event.ToolDetails = []string{"rg", "go test"}
 
 	if err := s.Append(event); err != nil {
 		t.Fatal(err)
@@ -32,6 +33,9 @@ func TestJSONLStoreAppendAndSnapshot(t *testing.T) {
 	}
 	if snapshot.Summary.TotalTokens != 1200 {
 		t.Fatalf("tokens = %d, want 1200", snapshot.Summary.TotalTokens)
+	}
+	if len(snapshot.Events[0].ToolDetails) != 2 {
+		t.Fatalf("tool details = %#v", snapshot.Events[0].ToolDetails)
 	}
 }
 

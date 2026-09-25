@@ -38,19 +38,19 @@ export AGENT_MONITOR_API_KEY=<エージェント登録用API Key>
 開始時:
 
 ```bash
-AGENT_MONITOR_ENABLED=true AGENT_MONITOR_AGENT=codex go run ./cmd/agent-monitor --type task --status running --title "<作業名>" --agent codex --message "<短い状況>"
+AGENT_MONITOR_ENABLED=true AGENT_MONITOR_AGENT=codex go run ./cmd/agent-monitor --type task --status running --title "<作業名>" --agent codex --message "<短い状況>" --tools "<使用ツール名をカンマ区切り>"
 ```
 
 終了直前:
 
 ```bash
-AGENT_MONITOR_ENABLED=true AGENT_MONITOR_AGENT=codex go run ./cmd/agent-monitor --type task --status success --title "<作業名>" --agent codex --message "<完了内容>"
+AGENT_MONITOR_ENABLED=true AGENT_MONITOR_AGENT=codex go run ./cmd/agent-monitor --type task --status success --title "<作業名>" --agent codex --message "<完了内容>" --tools "<使用ツール名をカンマ区切り>"
 ```
 
 失敗時:
 
 ```bash
-AGENT_MONITOR_ENABLED=true AGENT_MONITOR_AGENT=codex go run ./cmd/agent-monitor --type error --status failed --title "<作業名>" --agent codex --message "<原因と対応>"
+AGENT_MONITOR_ENABLED=true AGENT_MONITOR_AGENT=codex go run ./cmd/agent-monitor --type error --status failed --title "<作業名>" --agent codex --message "<原因と対応>" --tools "<使用ツール名をカンマ区切り>"
 ```
 
 ## 失敗時の扱い

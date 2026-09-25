@@ -35,7 +35,7 @@ touch .agent-monitor
 3. CLI からイベントを記録します。
 
 ```bash
-go run ./cmd/agent-monitor --type task --status running --title "MVPを実装" --agent codex --tokens 1200 --tool-calls 4
+go run ./cmd/agent-monitor --type task --status running --title "MVPを実装" --agent codex --tokens 1200 --tool-calls 4 --tools "rg,go test,npm run build"
 go run ./cmd/agent-monitor --type question --status blocked --title "AWSアカウントIDの確認が必要"
 ```
 
@@ -119,10 +119,11 @@ export AGENT_MONITOR_AGENT=codex
 export AGENT_MONITOR_API_URL="<監視APIのURL>"
 export AGENT_MONITOR_API_KEY="<エージェント登録用API Key>"
 
-go run ./cmd/agent-monitor --type task --status running --title "Codex作業開始" --agent codex
+go run ./cmd/agent-monitor --type task --status running --title "Codex作業開始" --agent codex --tools "rg,go test"
 ```
 
 ローカルでは同じ内容を `.agent-monitor.env` に置くと、`cmd/agent-monitor` が起動時に自動で読み込みます。
+ツール詳細は `--tools` または `AGENT_MONITOR_TOOL_NAMES` にカンマ区切りで指定します。
 
 API KeyはAWS環境作成後、AWS CLIやコンソールから取得し、GitHub Secretsまたはローカルの `.agent-monitor.env` に保存します。値をREADMEやコミットに含めないでください。
 
