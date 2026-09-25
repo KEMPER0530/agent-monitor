@@ -29,18 +29,19 @@ const (
 
 // Event はCLI、ローカルAPI、AWS Lambdaで共通利用する監視データの単位です。
 type Event struct {
-	ID        string            `json:"id"`
-	Type      EventType         `json:"type"`
-	Status    Status            `json:"status"`
-	Title     string            `json:"title"`
-	Message   string            `json:"message,omitempty"`
-	Agent     string            `json:"agent,omitempty"`
-	TaskID    string            `json:"taskId,omitempty"`
-	CostUSD   float64           `json:"costUsd,omitempty"`
-	Tokens    int               `json:"tokens,omitempty"`
-	ToolCalls int               `json:"toolCalls,omitempty"`
-	Metadata  map[string]string `json:"metadata,omitempty"`
-	CreatedAt time.Time         `json:"createdAt"`
+	ID          string            `json:"id"`
+	Type        EventType         `json:"type"`
+	Status      Status            `json:"status"`
+	Title       string            `json:"title"`
+	Message     string            `json:"message,omitempty"`
+	Agent       string            `json:"agent,omitempty"`
+	TaskID      string            `json:"taskId,omitempty"`
+	CostUSD     float64           `json:"costUsd,omitempty"`
+	Tokens      int               `json:"tokens,omitempty"`
+	ToolCalls   int               `json:"toolCalls,omitempty"`
+	ToolDetails []string          `json:"toolDetails,omitempty"`
+	Metadata    map[string]string `json:"metadata,omitempty"`
+	CreatedAt   time.Time         `json:"createdAt"`
 }
 
 // Snapshot はダッシュボードが一度に描画する集計済み状態です。

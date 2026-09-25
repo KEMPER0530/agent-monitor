@@ -12,6 +12,7 @@ type MonitorEvent = {
   costUsd?: number;
   tokens?: number;
   toolCalls?: number;
+  toolDetails?: string[];
   createdAt: string;
 };
 
@@ -264,9 +265,71 @@ function eventRow(event: MonitorEvent): HTMLElement {
     message.textContent = event.message;
     body.append(message);
   }
+  body.append(eventUsage(event));
 
   article.append(rail, body);
   return article;
+}
+
+// eventUsage は履歴ごとの利用量とツール実行詳細を読みやすくまとめます。
+function eventUsage(event: MonitorEvent): HTMLElement {
+  const container = document.createElement("div");
+  container.className = "event-usage";
+
+  container.append(
+    usageChip("コスト", `$${(event.costUsd ?? 0).toFixed(4)}`),
+    usageChip("トークン", (event.tokens ?? 0).toLocaleString()),
+    usageChip("ツール", (event.toolCalls ?? 0).toLocaleString()),
+  );
+
+  const toolDetails = normalizedToolDetails(event);
+  if ((event.toolCalls ?? 0) > 0 || toolDetails.length > 0) {
+    const details = document.createElement("details");
+    details.className = "tool-details";
+
+    const summary = document.createElement("summary");
+    summary.textContent = "ツール詳細";
+    details.append(summary);
+
+    if (toolDetails.length === 0) {
+      const empty = document.createElement("p");
+      empty.textContent = "ツール名は未送信です。";
+      details.append(empty);
+    } else {
+      const list = document.createElement("ul");
+      for (const tool of toolDetails) {
+        const item = document.createElement("li");
+        item.textContent = tool;
+        list.append(item);
+      }
+      details.append(list);
+    }
+    container.append(details);
+  }
+
+  return container;
+}
+
+// usageChip は数値を同じ見た目の小さな指標として返します。
+function usageChip(label: string, value: string): HTMLElement {
+  const chip = document.createElement("span");
+  chip.className = "usage-chip";
+
+  const labelElement = document.createElement("span");
+  labelElement.textContent = label;
+
+  const valueElement = document.createElement("strong");
+  valueElement.textContent = value;
+
+  chip.append(labelElement, valueElement);
+  return chip;
+}
+
+// normalizedToolDetails はAPIの古い応答にも耐えるため、表示前に配列へ整えます。
+function normalizedToolDetails(event: MonitorEvent): string[] {
+  return (event.toolDetails || [])
+    .map((tool) => tool.trim())
+    .filter((tool, index, tools) => tool !== "" && tools.indexOf(tool) === index);
 }
 
 // statusLabel は保存値を画面表示用の日本語へ変換します。

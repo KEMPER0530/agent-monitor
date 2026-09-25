@@ -52,3 +52,11 @@ def test_latest_question_events_replaces_open_with_success():
     )
 
     assert latest["question-1"]["status"] == "success"
+
+
+# ツール詳細はCSV文字列でも配列でも同じ表示用配列に整えます。
+def test_normalize_tool_details_removes_blanks_and_duplicates():
+    app = importlib.import_module("app")
+
+    assert app.normalize_tool_details("rg, go test, rg, ") == ["rg", "go test"]
+    assert app.normalize_tool_details(["curl", "curl", "npm run build"]) == ["curl", "npm run build"]
