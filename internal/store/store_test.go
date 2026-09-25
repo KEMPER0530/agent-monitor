@@ -35,6 +35,34 @@ func TestJSONLStoreAppendAndSnapshot(t *testing.T) {
 	}
 }
 
+// 同じtaskIdの完了イベントが届いたら、実行中として残さないことを確認します。
+func TestBuildSnapshotCountsLatestTaskState(t *testing.T) {
+	running := model.NewEvent(model.EventTask, model.StatusRunning, "Start deploy")
+	running.TaskID = "deploy-1"
+	success := model.NewEvent(model.EventTask, model.StatusSuccess, "Finish deploy")
+	success.TaskID = "deploy-1"
+
+	snapshot := BuildSnapshot([]model.Event{running, success})
+
+	if snapshot.Summary.RunningTasks != 0 {
+		t.Fatalf("running tasks = %d, want 0", snapshot.Summary.RunningTasks)
+	}
+}
+
+// 同じtaskIdの質問が成功済みなら、未対応質問として残さないことを確認します。
+func TestBuildSnapshotCountsLatestQuestionState(t *testing.T) {
+	question := model.NewEvent(model.EventQuestion, model.StatusRunning, "Need review")
+	question.TaskID = "review-1"
+	answered := model.NewEvent(model.EventQuestion, model.StatusSuccess, "Review answered")
+	answered.TaskID = "review-1"
+
+	snapshot := BuildSnapshot([]model.Event{question, answered})
+
+	if snapshot.Summary.OpenQuestions != 0 {
+		t.Fatalf("open questions = %d, want 0", snapshot.Summary.OpenQuestions)
+	}
+}
+
 // 必須項目がないイベントは保存せず、壊れた監視データを混入させません。
 func TestJSONLStoreRejectsInvalidEvent(t *testing.T) {
 	s := NewJSONLStore(t.TempDir())

@@ -70,12 +70,14 @@ def get_snapshot(event):
 
     result = table.query(KeyConditionExpression=Key("pk").eq("EVENT"), ScanIndexForward=True)
     events = [normalize(item) for item in result.get("Items", [])]
+    latest_tasks = latest_task_events(events)
+    latest_questions = latest_question_events(events)
     summary = {
         "agent": agent_key,
         "totalEvents": len(events),
-        "runningTasks": sum(1 for item in events if item["type"] == "task" and item["status"] == "running"),
+        "runningTasks": sum(1 for item in latest_tasks.values() if item["status"] == "running"),
         "failedEvents": sum(1 for item in events if item["status"] == "failed"),
-        "openQuestions": sum(1 for item in events if item["type"] == "question" and item["status"] != "success"),
+        "openQuestions": sum(1 for item in latest_questions.values() if item["status"] != "success"),
         "totalCostUsd": sum(float(item.get("costUsd", 0)) for item in events),
         "totalTokens": sum(int(item.get("tokens", 0)) for item in events),
         "totalToolCalls": sum(int(item.get("toolCalls", 0)) for item in events),
@@ -89,6 +91,34 @@ def get_snapshot(event):
             "events": events,
         },
     )
+
+
+# latest_task_events は同じtaskIdの作業を最新状態へ畳み込み、完了済みを実行中に残しません。
+def latest_task_events(events):
+    latest = {}
+    for item in events:
+        if item["type"] != "task":
+            continue
+        task_key = item.get("taskId")
+        if not task_key and item["status"] == "running":
+            task_key = item["id"]
+        if task_key:
+            latest[task_key] = item
+    return latest
+
+
+# latest_question_events は回答済みの質問を未対応件数に残さないよう最新状態へ畳み込みます。
+def latest_question_events(events):
+    latest = {}
+    for item in events:
+        if item["type"] != "question":
+            continue
+        question_key = item.get("taskId")
+        if not question_key and item["status"] != "success":
+            question_key = item["id"]
+        if question_key:
+            latest[question_key] = item
+    return latest
 
 
 # queryStringParametersはAPI Gatewayの設定によりNoneになるため安全に取り出します。

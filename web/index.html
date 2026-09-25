@@ -81,12 +81,28 @@
 
         <section class="metrics" aria-label="summary">
           <article class="metric-card total">
-            <span>イベント</span>
+            <span class="label-with-help">
+              イベント
+              <button
+                class="help-tip"
+                type="button"
+                aria-label="イベントの説明"
+                data-help="受信した監視シグナルの合計件数です。作業開始、完了、エラー、質問などが1件ずつ記録されます。"
+              >?</button>
+            </span>
             <strong id="metric-events">0</strong>
             <small id="event-note">イベントなし</small>
           </article>
           <article class="metric-card running">
-            <span>実行中</span>
+            <span class="label-with-help">
+              実行中
+              <button
+                class="help-tip"
+                type="button"
+                aria-label="実行中の説明"
+                data-help="まだ完了していないタスクの件数です。同じタスクの成功または失敗イベントが届くと、この件数から外れます。"
+              >?</button>
+            </span>
             <strong id="metric-running">0</strong>
             <small>進行中のタスク</small>
           </article>
@@ -96,7 +112,15 @@
             <small>確認が必要</small>
           </article>
           <article class="metric-card question">
-            <span>質問</span>
+            <span class="label-with-help">
+              質問
+              <button
+                class="help-tip"
+                type="button"
+                aria-label="質問の説明"
+                data-help="AIエージェントが人の判断を待っている質問や確認依頼の件数です。0以外なら回答が必要です。"
+              >?</button>
+            </span>
             <strong id="metric-questions">0</strong>
             <small>人間の判断待ち</small>
           </article>
@@ -107,7 +131,15 @@
             <div class="panel-head">
               <div>
                 <p class="eyebrow">ライブ履歴</p>
-                <h3>タイムライン</h3>
+                <h3 class="label-with-help">
+                  タイムライン
+                  <button
+                    class="help-tip"
+                    type="button"
+                    aria-label="タイムラインの説明"
+                    data-help="AIエージェントから届いたイベントを新しい順に並べた履歴です。作業の流れや異常が起きたタイミングを確認できます。"
+                  >?</button>
+                </h3>
               </div>
               <div class="segmented" aria-label="status filter">
                 <button class="filter active" type="button" data-filter="all">すべて</button>
@@ -128,15 +160,39 @@
               </div>
               <dl class="usage-list">
                 <div>
-                  <dt>コスト</dt>
+                  <dt class="label-with-help">
+                    コスト
+                    <button
+                      class="help-tip"
+                      type="button"
+                      aria-label="コストの説明"
+                      data-help="イベントに含まれる概算利用料金の合計です。金額が送られていないイベントは0円として扱います。"
+                    >?</button>
+                  </dt>
                   <dd id="metric-cost">$0.00</dd>
                 </div>
                 <div>
-                  <dt>トークン</dt>
+                  <dt class="label-with-help">
+                    トークン
+                    <button
+                      class="help-tip"
+                      type="button"
+                      aria-label="トークンの説明"
+                      data-help="AIが読み書きした文字量の目安です。多いほど処理した情報量が大きいことを示します。"
+                    >?</button>
+                  </dt>
                   <dd id="metric-tokens">0</dd>
                 </div>
                 <div>
-                  <dt>ツール実行</dt>
+                  <dt class="label-with-help">
+                    ツール実行
+                    <button
+                      class="help-tip"
+                      type="button"
+                      aria-label="ツール実行の説明"
+                      data-help="AIがコマンド、ファイル編集、API呼び出しなどの道具を使った回数の合計です。"
+                    >?</button>
+                  </dt>
                   <dd id="metric-tools">0</dd>
                 </div>
               </dl>
@@ -150,6 +206,7 @@
         </section>
       </main>
     </div>
+    <div id="tooltip-layer" class="tooltip-layer" role="tooltip" hidden></div>
     <script src="/auth-config.js"></script>
     <script src="/app.js" type="module"></script>
   </body>

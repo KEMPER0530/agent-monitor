@@ -125,15 +125,31 @@ func (s *JSONLStore) writeStateLocked() error {
 // BuildSnapshot は保存層に依存しない集計ロジックとしてテストしやすくしています。
 func BuildSnapshot(events []model.Event) model.Snapshot {
 	summary := model.Summary{TotalEvents: len(events)}
+	latestTasks := map[string]model.Event{}
+	latestQuestions := map[string]model.Event{}
 	for _, event := range events {
-		if event.Status == model.StatusRunning && event.Type == model.EventTask {
-			summary.RunningTasks++
-		}
 		if event.Status == model.StatusFailed {
 			summary.FailedEvents++
 		}
-		if event.Type == model.EventQuestion && event.Status != model.StatusSuccess {
-			summary.OpenQuestions++
+		if event.Type == model.EventTask {
+			// taskIdがあるイベントは同じ作業の最新状態だけを「実行中」判定に使います。
+			taskKey := event.TaskID
+			if taskKey == "" && event.Status == model.StatusRunning {
+				taskKey = event.ID
+			}
+			if taskKey != "" {
+				latestTasks[taskKey] = event
+			}
+		}
+		if event.Type == model.EventQuestion {
+			// 質問も同じtaskIdの最新状態を見て、回答済みを未対応として残しません。
+			questionKey := event.TaskID
+			if questionKey == "" && event.Status != model.StatusSuccess {
+				questionKey = event.ID
+			}
+			if questionKey != "" {
+				latestQuestions[questionKey] = event
+			}
 		}
 		summary.TotalCostUSD += event.CostUSD
 		summary.TotalTokens += event.Tokens
@@ -142,6 +158,16 @@ func BuildSnapshot(events []model.Event) model.Snapshot {
 			summary.LastEventMessage = event.Message
 		} else {
 			summary.LastEventMessage = event.Title
+		}
+	}
+	for _, event := range latestTasks {
+		if event.Status == model.StatusRunning {
+			summary.RunningTasks++
+		}
+	}
+	for _, event := range latestQuestions {
+		if event.Status != model.StatusSuccess {
+			summary.OpenQuestions++
 		}
 	}
 	return model.Snapshot{
