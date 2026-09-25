@@ -13,6 +13,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      # mainへの反映前に、ローカルMVPとCDK定義の最低限の破綻を検出します。
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
@@ -20,7 +21,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: go test ./...
+      - run: go test ./cmd/... ./internal/...
       - run: npm install
         working-directory: infra
       - run: npm run build
@@ -30,16 +31,32 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     needs: test
     runs-on: ubuntu-latest
+    env:
+      # AWS_ROLE_TO_ASSUMEが未設定ならデプロイだけをスキップしてCI失敗を避けます。
+      AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+      AWS_REGION: ${{ vars.AWS_REGION || 'ap-northeast-1' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - name: Skip deploy when AWS role is not configured
+        if: env.AWS_ROLE_TO_ASSUME == ''
+        run: echo "AWS_ROLE_TO_ASSUME is not set. Tests passed; deployment was skipped."
       - uses: aws-actions/configure-aws-credentials@v4
+        if: env.AWS_ROLE_TO_ASSUME != ''
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          aws-region: ${{ vars.AWS_REGION || 'ap-northeast-1' }}
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
       - run: npm install
+        if: env.AWS_ROLE_TO_ASSUME != ''
         working-directory: infra
-      - run: npm run deploy
+      - name: Deploy infrastructure once, then update app assets
+        if: env.AWS_ROLE_TO_ASSUME != ''
+        run: |
+          if aws cloudformation describe-stacks --stack-name AgentMonitorStack --region "${AWS_REGION}" >/dev/null 2>&1; then
+            npm run deploy:app
+          else
+            npm run deploy
+          fi
         working-directory: infra

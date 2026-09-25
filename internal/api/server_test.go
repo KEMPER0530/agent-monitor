@@ -9,6 +9,7 @@ import (
 	"github.com/KEMPER0530/agent-monitor/internal/store"
 )
 
+// HTTP経由でイベント登録し、同じサーバーから集計を取得できることを確認します。
 func TestPostEventAndSnapshot(t *testing.T) {
 	server := NewServer(store.NewJSONLStore(t.TempDir()), "testdata")
 
@@ -32,4 +33,3 @@ func TestPostEventAndSnapshot(t *testing.T) {
 		t.Fatalf("snapshot body = %s", rec.Body.String())
 	}
 }
-

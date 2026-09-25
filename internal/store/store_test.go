@@ -6,6 +6,7 @@ import (
 	"github.com/KEMPER0530/agent-monitor/internal/model"
 )
 
+// JSONL追記後にスナップショット集計へ反映されることを確認します。
 func TestJSONLStoreAppendAndSnapshot(t *testing.T) {
 	s := NewJSONLStore(t.TempDir())
 
@@ -34,6 +35,7 @@ func TestJSONLStoreAppendAndSnapshot(t *testing.T) {
 	}
 }
 
+// 必須項目がないイベントは保存せず、壊れた監視データを混入させません。
 func TestJSONLStoreRejectsInvalidEvent(t *testing.T) {
 	s := NewJSONLStore(t.TempDir())
 
@@ -41,4 +43,3 @@ func TestJSONLStoreRejectsInvalidEvent(t *testing.T) {
 		t.Fatal("expected validation error")
 	}
 }
-

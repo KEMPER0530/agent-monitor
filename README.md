@@ -48,6 +48,28 @@ CloudFront -> API Gateway -> Lambda -> DynamoDB
 CloudFront -> S3 dashboard
 ```
 
+Production URL:
+
+```text
+https://s3-agent-monitor.kemper0530.com
+```
+
+AWS separates persisted data by agent:
+
+- Codex: `agent-monitor-codex-events`
+- Claude: `agent-monitor-claude-events`
+
+Lambda environment flags:
+
+- `CODEX_MONITOR_ENABLED=true|false`
+- `CLAUDE_MONITOR_ENABLED=true|false`
+
+Dashboard access is protected by the existing Cognito User Pool:
+
+- User Pool: `nuxt-mail-demo` / `ap-northeast-1_7da4pYlPc`
+- Hosted UI domain: `https://agent-monitor-kemper0530.auth.ap-northeast-1.amazoncognito.com`
+- API Gateway requires a Cognito JWT on `/api/*`
+
 The Go code keeps a small clean architecture split:
 
 - `internal/model`: event and snapshot entities
@@ -60,6 +82,8 @@ The Go code keeps a small clean architecture split:
 ```bash
 make test
 ```
+
+`make test` targets `cmd` and `internal` so local `infra/node_modules` files are never treated as Go packages.
 
 ## AWS CDK
 
@@ -78,6 +102,15 @@ cd infra
 npm run deploy
 ```
 
+After the first CDK deployment, update only S3 and Lambda:
+
+```bash
+cd infra
+npm run deploy:app
+```
+
+`deploy:app` syncs `web/` to S3, updates the ingest Lambda code, and creates a CloudFront invalidation.
+
 Deploy to LocalStack:
 
 ```bash
@@ -93,9 +126,10 @@ LocalStack CloudFront support depends on the LocalStack edition and version. The
 ## GitHub Actions
 
 `.github/workflows/deploy.yml` runs Go tests and CDK type checks for pull requests. Pushes to `main` deploy to AWS after tests pass.
+If `AWS_ROLE_TO_ASSUME` is not configured, the deploy job is skipped after tests pass.
+When AWS credentials are configured, the deploy job checks `AgentMonitorStack`: it runs CDK only when the stack does not exist, and uses `deploy:app` after the initial environment exists.
 
 Required configuration:
 
 - Secret: `AWS_ROLE_TO_ASSUME`
 - Variable: `AWS_REGION` such as `ap-northeast-1`
-

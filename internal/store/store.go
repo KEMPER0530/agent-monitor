@@ -15,21 +15,25 @@ import (
 
 const eventsFile = "events.jsonl"
 
+// EventStore は保存先をJSONL以外へ差し替えやすくする境界です。
 type EventStore interface {
 	Append(model.Event) error
 	List() ([]model.Event, error)
 	Snapshot() (model.Snapshot, error)
 }
 
+// JSONLStore はMVP用のファイルベース永続化です。
 type JSONLStore struct {
 	dir string
 	mu  sync.Mutex
 }
 
+// NewJSONLStore は保存ディレクトリだけを受け取り、呼び出し側を単純に保ちます。
 func NewJSONLStore(dir string) *JSONLStore {
 	return &JSONLStore{dir: dir}
 }
 
+// Append はJSONLへ追記し、ダッシュボード用のstate.jsonも更新します。
 func (s *JSONLStore) Append(event model.Event) error {
 	if err := event.Validate(); err != nil {
 		return err
@@ -57,6 +61,7 @@ func (s *JSONLStore) Append(event model.Event) error {
 	return s.writeStateLocked()
 }
 
+// List は保存済みイベントを作成時刻順で返します。
 func (s *JSONLStore) List() ([]model.Event, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -64,6 +69,7 @@ func (s *JSONLStore) List() ([]model.Event, error) {
 	return s.listLocked()
 }
 
+// Snapshot は現在のイベント列からUI向け集計を作ります。
 func (s *JSONLStore) Snapshot() (model.Snapshot, error) {
 	events, err := s.List()
 	if err != nil {
@@ -72,6 +78,7 @@ func (s *JSONLStore) Snapshot() (model.Snapshot, error) {
 	return BuildSnapshot(events), nil
 }
 
+// listLocked は呼び出し元がmutexを持っている前提の読み込み処理です。
 func (s *JSONLStore) listLocked() ([]model.Event, error) {
 	path := filepath.Join(s.dir, eventsFile)
 	file, err := os.Open(path)
@@ -101,6 +108,7 @@ func (s *JSONLStore) listLocked() ([]model.Event, error) {
 	return events, nil
 }
 
+// writeStateLocked は外部ツールが読みやすいJSONスナップショットを併せて出力します。
 func (s *JSONLStore) writeStateLocked() error {
 	events, err := s.listLocked()
 	if err != nil {
@@ -114,6 +122,7 @@ func (s *JSONLStore) writeStateLocked() error {
 	return os.WriteFile(filepath.Join(s.dir, "state.json"), encoded, 0644)
 }
 
+// BuildSnapshot は保存層に依存しない集計ロジックとしてテストしやすくしています。
 func BuildSnapshot(events []model.Event) model.Snapshot {
 	summary := model.Summary{TotalEvents: len(events)}
 	for _, event := range events {
@@ -141,4 +150,3 @@ func BuildSnapshot(events []model.Event) model.Snapshot {
 		Events:      events,
 	}
 }
-

@@ -9,9 +9,10 @@ import (
 const (
 	EnabledEnv     = "AGENT_MONITOR_ENABLED"
 	DefaultDataDir = ".agent-monitor-data"
-	MarkerFile    = ".agent-monitor"
+	MarkerFile     = ".agent-monitor"
 )
 
+// Config はローカル実行時に必要な設定をまとめた値です。
 type Config struct {
 	Enabled bool
 	DataDir string
@@ -19,6 +20,7 @@ type Config struct {
 	Addr    string
 }
 
+// Load は環境変数とカレントプロジェクトから実行設定を作ります。
 func Load(rootDir string) Config {
 	if rootDir == "" {
 		rootDir, _ = os.Getwd()
@@ -31,6 +33,7 @@ func Load(rootDir string) Config {
 	}
 }
 
+// IsEnabled は「環境変数を最優先、次に.marker、最後はOFF」の優先順位を実装します。
 func IsEnabled(rootDir string) bool {
 	value, ok := os.LookupEnv(EnabledEnv)
 	if ok {
@@ -44,10 +47,10 @@ func IsEnabled(rootDir string) bool {
 	return err == nil
 }
 
+// envOrDefault は空文字を未設定扱いにして、運用時の指定漏れを避けます。
 func envOrDefault(key, fallback string) string {
 	if value := strings.TrimSpace(os.Getenv(key)); value != "" {
 		return value
 	}
 	return fallback
 }
-

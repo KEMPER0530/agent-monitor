@@ -6,6 +6,7 @@ import (
 	"testing"
 )
 
+// 環境変数は.markerより優先されるため、明示OFFなら必ずOFFになります。
 func TestIsEnabledPrefersEnvironment(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, MarkerFile), []byte("on"), 0644); err != nil {
@@ -18,6 +19,7 @@ func TestIsEnabledPrefersEnvironment(t *testing.T) {
 	}
 }
 
+// 環境変数がない場合だけ、プロジェクトの.markerでONにできます。
 func TestIsEnabledUsesMarkerWhenEnvMissing(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, MarkerFile), []byte("on"), 0644); err != nil {
@@ -30,6 +32,7 @@ func TestIsEnabledUsesMarkerWhenEnvMissing(t *testing.T) {
 	}
 }
 
+// 明示設定も.markerもなければ、通常開発を邪魔しないようOFFです。
 func TestIsEnabledDefaultsOff(t *testing.T) {
 	root := t.TempDir()
 	os.Unsetenv(EnabledEnv)
@@ -38,4 +41,3 @@ func TestIsEnabledDefaultsOff(t *testing.T) {
 		t.Fatal("expected monitoring to default off")
 	}
 }
-

@@ -3,8 +3,9 @@
 run:
 	go run ./cmd/server
 
+# Node依存を入れた後でもCDK内部テンプレートを拾わないよう、Goコード配下だけを対象にします。
 test:
-	go test ./...
+	go test ./cmd/... ./internal/...
 
 build:
 	go build ./cmd/server
@@ -21,4 +22,3 @@ localstack-up:
 
 localstack-deploy:
 	cd infra && npm install && npm run deploy:local
-

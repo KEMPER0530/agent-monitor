@@ -6,7 +6,8 @@
     "build": "tsc --noEmit",
     "synth": "cdk synth",
     "deploy": "cdk deploy --require-approval never",
-    "deploy:local": "cdklocal deploy --require-approval never -c localstack=true"
+    "deploy:local": "cdklocal deploy --require-approval never -c localstack=true",
+    "deploy:app": "bash scripts/deploy-app.sh"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
