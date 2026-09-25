@@ -43,17 +43,11 @@ export class AgentMonitorStack extends cdk.Stack {
       "AGENT_MONITOR_COGNITO_USER_POOL_ID",
       isLocalStack ? "local_user_pool" : undefined,
     );
-    const cognitoDomainPrefix = requiredConfigValue(
-      "cognitoDomainPrefix",
-      "AGENT_MONITOR_COGNITO_DOMAIN_PREFIX",
-      isLocalStack ? "agent-monitor-local" : undefined,
-    );
     const codexEventsTableName = configValue("codexEventsTableName", "AGENT_MONITOR_CODEX_EVENTS_TABLE_NAME");
     const claudeEventsTableName = configValue("claudeEventsTableName", "AGENT_MONITOR_CLAUDE_EVENTS_TABLE_NAME");
     const ingestFunctionName = configValue("ingestFunctionName", "AGENT_MONITOR_INGEST_FUNCTION_NAME");
     const ingestApiKeyName = configValue("ingestApiKeyName", "AGENT_MONITOR_INGEST_API_KEY_NAME");
     const ingestUsagePlanName = configValue("ingestUsagePlanName", "AGENT_MONITOR_INGEST_USAGE_PLAN_NAME");
-    const callbackUrl = `https://${dashboardDomain}/`;
 
     // CodexとClaudeのイベントは別テーブルに分け、誤混在を防ぎます。
     const codexTable = new dynamodb.Table(this, "CodexEventsTable", {
@@ -96,17 +90,9 @@ export class AgentMonitorStack extends cdk.Stack {
       userPoolId,
       clientName: "agent-monitor-dashboard",
       generateSecret: false,
-      allowedOAuthFlowsUserPoolClient: true,
-      allowedOAuthFlows: ["implicit"],
-      allowedOAuthScopes: ["openid", "email", "profile"],
+      explicitAuthFlows: ["ALLOW_USER_PASSWORD_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"],
       supportedIdentityProviders: ["COGNITO"],
-      callbackUrLs: [callbackUrl],
-      logoutUrLs: [callbackUrl],
       preventUserExistenceErrors: "ENABLED",
-    });
-    const userPoolDomain = new cognito.CfnUserPoolDomain(this, "DashboardUserPoolDomain", {
-      domain: cognitoDomainPrefix,
-      userPoolId,
     });
     const authorizer = new apigateway.CognitoUserPoolsAuthorizer(this, "DashboardApiAuthorizer", {
       cognitoUserPools: [userPool],
@@ -227,10 +213,7 @@ export class AgentMonitorStack extends cdk.Stack {
           [
             "window.AGENT_MONITOR_AUTH = {",
             `  region: "${this.region}",`,
-            `  userPoolId: "${userPoolId}",`,
             `  clientId: "${userPoolClient.ref}",`,
-            `  domain: "https://${cognitoDomainPrefix}.auth.${this.region}.amazoncognito.com",`,
-            `  redirectUri: "${callbackUrl}",`,
             "};",
           ].join("\n"),
         ),
@@ -256,9 +239,6 @@ export class AgentMonitorStack extends cdk.Stack {
     });
     new cdk.CfnOutput(this, "CognitoClientId", {
       value: userPoolClient.ref,
-    });
-    new cdk.CfnOutput(this, "CognitoDomain", {
-      value: `https://${cognitoDomainPrefix}.auth.${this.region}.amazoncognito.com`,
     });
     new cdk.CfnOutput(this, "IngestApiKeyId", {
       value: ingestApiKey.keyId,

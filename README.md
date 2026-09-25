@@ -107,9 +107,9 @@ GET /api/snapshot?agent=claude
 
 ## API認証と呼び出し方法
 
-参照APIはCognito Authorizerで保護されています。ダッシュボードのJavaScriptが、ログイン後に取得したIDトークンを自動で付与します。
+参照APIはCognito Authorizerで保護されています。ダッシュボードのJavaScriptが、画面内ログインで取得したIDトークンを自動で付与します。
 
-ダッシュボードから参照する場合は、Cognito Hosted UI でログインすると `web/app.ts` が ID トークンを取得し、スナップショット取得APIへ自動付与します。
+ダッシュボードから参照する場合は、`web/app.ts` のカスタムログイン画面からCognitoへ認証し、スナップショット取得APIへIDトークンを自動付与します。
 
 Codexから自動送信する場合は、CognitoログインではなくAPI Gateway API Keyを使います。`AGENTS.md` のルールに従って `cmd/agent-monitor` が実行され、`AGENT_MONITOR_API_URL` と `AGENT_MONITOR_API_KEY` が設定されていればAWS APIへ送信し、未設定ならローカルJSONLへ保存します。
 
@@ -173,7 +173,6 @@ npm install
 export AGENT_MONITOR_ZONE_NAME="<Route53のHosted Zone名>"
 export AGENT_MONITOR_DASHBOARD_DOMAIN="<ダッシュボード公開ドメイン>"
 export AGENT_MONITOR_COGNITO_USER_POOL_ID="<既存Cognito User Pool ID>"
-export AGENT_MONITOR_COGNITO_DOMAIN_PREFIX="<Cognito Hosted UIドメインPrefix>"
 npm run synth
 ```
 
@@ -230,7 +229,6 @@ CloudFront の対応範囲は LocalStack のエディションとバージョン
 - Variable: `AGENT_MONITOR_ZONE_NAME`
 - Variable: `AGENT_MONITOR_DASHBOARD_DOMAIN`
 - Variable: `AGENT_MONITOR_COGNITO_USER_POOL_ID`
-- Variable: `AGENT_MONITOR_COGNITO_DOMAIN_PREFIX`
 
 既存リソース名を固定したい場合だけ、次のVariablesも設定します。未設定の場合はCDKが名前を生成します。
 
