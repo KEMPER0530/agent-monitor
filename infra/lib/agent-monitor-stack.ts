@@ -20,10 +20,39 @@ export class AgentMonitorStack extends cdk.Stack {
 
     // LocalStackでは削除しやすさを優先し、AWS本番ではデータ保持を優先します。
     const isLocalStack = this.node.tryGetContext("localstack") === "true";
-    const zoneName = this.node.tryGetContext("zoneName") || "kemper0530.com";
-    const dashboardDomain = this.node.tryGetContext("dashboardDomain") || `s3-agent-monitor.${zoneName}`;
-    const userPoolId = this.node.tryGetContext("userPoolId") || "ap-northeast-1_7da4pYlPc";
-    const cognitoDomainPrefix = this.node.tryGetContext("cognitoDomainPrefix") || "agent-monitor-kemper0530";
+    const configValue = (contextName: string, envName: string, fallback?: string): string | undefined => {
+      const contextValue = this.node.tryGetContext(contextName);
+      const value = contextValue ?? process.env[envName] ?? fallback;
+      return typeof value === "string" && value.trim() !== "" ? value : undefined;
+    };
+    const requiredConfigValue = (contextName: string, envName: string, fallback?: string): string => {
+      const value = configValue(contextName, envName, fallback);
+      if (!value) {
+        throw new Error(`${contextName} is required. Pass -c ${contextName}=... or set ${envName}.`);
+      }
+      return value;
+    };
+    const zoneName = requiredConfigValue("zoneName", "AGENT_MONITOR_ZONE_NAME", isLocalStack ? "example.local" : undefined);
+    const dashboardDomain = requiredConfigValue(
+      "dashboardDomain",
+      "AGENT_MONITOR_DASHBOARD_DOMAIN",
+      isLocalStack ? "agent-monitor.example.local" : undefined,
+    );
+    const userPoolId = requiredConfigValue(
+      "userPoolId",
+      "AGENT_MONITOR_COGNITO_USER_POOL_ID",
+      isLocalStack ? "local_user_pool" : undefined,
+    );
+    const cognitoDomainPrefix = requiredConfigValue(
+      "cognitoDomainPrefix",
+      "AGENT_MONITOR_COGNITO_DOMAIN_PREFIX",
+      isLocalStack ? "agent-monitor-local" : undefined,
+    );
+    const codexEventsTableName = configValue("codexEventsTableName", "AGENT_MONITOR_CODEX_EVENTS_TABLE_NAME");
+    const claudeEventsTableName = configValue("claudeEventsTableName", "AGENT_MONITOR_CLAUDE_EVENTS_TABLE_NAME");
+    const ingestFunctionName = configValue("ingestFunctionName", "AGENT_MONITOR_INGEST_FUNCTION_NAME");
+    const ingestApiKeyName = configValue("ingestApiKeyName", "AGENT_MONITOR_INGEST_API_KEY_NAME");
+    const ingestUsagePlanName = configValue("ingestUsagePlanName", "AGENT_MONITOR_INGEST_USAGE_PLAN_NAME");
     const callbackUrl = `https://${dashboardDomain}/`;
 
     // CodexとClaudeのイベントは別テーブルに分け、誤混在を防ぎます。
@@ -31,14 +60,14 @@ export class AgentMonitorStack extends cdk.Stack {
       partitionKey: { name: "pk", type: dynamodb.AttributeType.STRING },
       sortKey: { name: "sk", type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      tableName: "agent-monitor-codex-events",
+      ...(codexEventsTableName ? { tableName: codexEventsTableName } : {}),
       removalPolicy: isLocalStack ? RemovalPolicy.DESTROY : RemovalPolicy.RETAIN,
     });
     const claudeTable = new dynamodb.Table(this, "ClaudeEventsTable", {
       partitionKey: { name: "pk", type: dynamodb.AttributeType.STRING },
       sortKey: { name: "sk", type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      tableName: "agent-monitor-claude-events",
+      ...(claudeEventsTableName ? { tableName: claudeEventsTableName } : {}),
       removalPolicy: isLocalStack ? RemovalPolicy.DESTROY : RemovalPolicy.RETAIN,
     });
 
@@ -48,7 +77,7 @@ export class AgentMonitorStack extends cdk.Stack {
       handler: "app.handler",
       code: lambda.Code.fromAsset(path.join(__dirname, "../lambda/ingest")),
       timeout: Duration.seconds(10),
-      functionName: "agent-monitor-ingest",
+      ...(ingestFunctionName ? { functionName: ingestFunctionName } : {}),
       environment: {
         CODEX_EVENTS_TABLE_NAME: codexTable.tableName,
         CLAUDE_EVENTS_TABLE_NAME: claudeTable.tableName,
@@ -87,7 +116,7 @@ export class AgentMonitorStack extends cdk.Stack {
     const api = new apigateway.RestApi(this, "AgentMonitorApi", {
       deployOptions: { stageName: "v1" },
       defaultCorsPreflightOptions: {
-        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowOrigins: [`https://${dashboardDomain}`],
         allowMethods: apigateway.Cors.ALL_METHODS,
         allowHeaders: ["Content-Type", "Authorization", "x-api-key", "X-Api-Key", "X-Amz-Date", "X-Amz-Security-Token"],
       },
@@ -105,10 +134,10 @@ export class AgentMonitorStack extends cdk.Stack {
 
     // エージェントからの自動送信は会社PCでも使えるように、CognitoではなくAPI Keyで保護します。
     const ingestApiKey = api.addApiKey("IngestApiKey", {
-      apiKeyName: "agent-monitor-ingest-key",
+      ...(ingestApiKeyName ? { apiKeyName: ingestApiKeyName } : {}),
     });
     const ingestUsagePlan = api.addUsagePlan("IngestUsagePlan", {
-      name: "agent-monitor-ingest-usage-plan",
+      ...(ingestUsagePlanName ? { name: ingestUsagePlanName } : {}),
       throttle: {
         rateLimit: 5,
         burstLimit: 10,
@@ -174,7 +203,7 @@ export class AgentMonitorStack extends cdk.Stack {
     });
 
     if (hostedZone) {
-      // s3-agent-monitor.kemper0530.comをCloudFrontへ向けます。
+      // 指定された公開ドメインをCloudFrontへ向けます。
       const recordName = dashboardDomain.replace(`.${zoneName}`, "");
       new route53.ARecord(this, "DashboardAliasRecord", {
         zone: hostedZone,
