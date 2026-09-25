@@ -14,25 +14,39 @@ https://s3-agent-monitor.kemper0530.com
 
 ## AWS構成図
 
-`docs/` 配下のdraw.ioファイルと生成画像はローカル確認用のため、Git管理対象外です。GitHub上では次のMermaid図で構成を確認します。
+GitHub上では次のMermaid図を正とします。draw.ioファイルや生成画像はローカル確認用のため、`docs/` 配下に置いてもGit管理しません。
 
 ```mermaid
 flowchart LR
-    user["利用者"] --> route53["Route53<br/>s3-agent-monitor.kemper0530.com"]
+    user["利用者"] --> route53["Route53"]
     route53 --> cloudfront["CloudFront"]
-    cloudfront --> s3["S3<br/>ダッシュボード配信"]
+    cloudfront --> s3["S3<br/>Dashboard"]
     cloudfront --> apigw["API Gateway<br/>/api/*"]
+
     user --> cognito["Cognito<br/>nuxt-mail-demo"]
-    cognito --> apigw
+    cognito -- "JWT<br/>GET /api/snapshot" --> apigw
+
+    codexAgent["Codex / Claude<br/>自動送信"] --> apiKey["API Key"]
+    apiKey -- "x-api-key<br/>POST /api/events" --> apigw
+
     apigw --> lambda["Lambda<br/>agent-monitor-ingest"]
-    lambda --> codex["DynamoDB<br/>agent-monitor-codex-events"]
-    lambda --> claude["DynamoDB<br/>agent-monitor-claude-events"]
+    lambda --> codexTable["DynamoDB<br/>Codex events"]
+    lambda --> claudeTable["DynamoDB<br/>Claude events"]
+
     deploy["GitHub Actions<br/>main merge"] --> tests["テスト"]
-    tests --> deployapp["S3/Lambda デプロイ<br/>CloudFront キャッシュ削除"]
+    tests --> deployapp["deploy:app"]
     deployapp --> s3
     deployapp --> lambda
     deployapp --> cloudfront
 ```
+
+主要な識別子:
+
+- 公開URL: `https://s3-agent-monitor.kemper0530.com`
+- Cognito User Pool: `nuxt-mail-demo` / `ap-northeast-1_7da4pYlPc`
+- Codexテーブル: `agent-monitor-codex-events`
+- Claudeテーブル: `agent-monitor-claude-events`
+- Ingest Lambda: `agent-monitor-ingest`
 
 ## ローカル起動
 
