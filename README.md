@@ -14,11 +14,7 @@ https://s3-agent-monitor.kemper0530.com
 
 ## AWS構成図
 
-draw.io 用の構成図ファイルは [docs/aws-architecture.drawio](docs/aws-architecture.drawio) にあります。README上では生成済み画像を表示します。
-
-![agent-monitor AWS構成図](docs/aws-architecture.png)
-
-AWSサービスアイコンは AWS Architecture Icons の公式パッケージから使用しています。
+`docs/` 配下のdraw.ioファイルと生成画像はローカル確認用のため、Git管理対象外です。GitHub上では次のMermaid図で構成を確認します。
 
 ```mermaid
 flowchart LR
