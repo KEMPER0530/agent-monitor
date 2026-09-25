@@ -758,16 +758,21 @@ dd {
 
   .login-shell {
     align-items: center;
-    grid-template-columns: minmax(0, 1fr) 420px;
+    grid-template-columns: minmax(440px, 0.9fr) 420px;
+    max-width: 980px;
     min-height: calc(100vh - 60px);
+    padding-top: clamp(48px, 8vh, 92px);
   }
 
   .login-brand {
+    align-content: center;
     padding: 0;
   }
 
   .login-panel {
+    align-self: center;
     padding: 24px;
+    transform: translateY(48px);
   }
 
   .sidebar {
