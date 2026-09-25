@@ -33,8 +33,7 @@ type Snapshot = {
 
 type AuthConfig = {
   clientId: string;
-  domain: string;
-  redirectUri: string;
+  region: string;
 };
 
 declare global {
@@ -46,6 +45,7 @@ declare global {
 let currentFilter = "all";
 let currentAgent = "codex";
 let currentSnapshot: Snapshot | null = null;
+let refreshTimer: number | undefined;
 
 // byId はDOM取得失敗を早めに検知して、描画崩れの原因を追いやすくします。
 const byId = <T extends HTMLElement>(id: string): T => {
@@ -65,35 +65,22 @@ async function loadSnapshot(): Promise<void> {
   render(currentSnapshot);
 }
 
-// ensureAuthenticated はS3公開時だけCognito Hosted UIへ誘導します。
+// ensureAuthenticated はS3公開時だけカスタムログイン画面を表示します。
 function ensureAuthenticated(): boolean {
   const config = window.AGENT_MONITOR_AUTH;
   if (!config) {
+    showDashboard();
     byId<HTMLButtonElement>("logout").hidden = true;
     return true;
   }
 
-  persistTokensFromHash();
-  if (sessionStorage.getItem("agentMonitorIdToken")) return true;
+  if (sessionStorage.getItem("agentMonitorIdToken")) {
+    showDashboard();
+    return true;
+  }
 
-  const loginUrl = new URL(`${config.domain}/login`);
-  loginUrl.searchParams.set("client_id", config.clientId);
-  loginUrl.searchParams.set("response_type", "token");
-  loginUrl.searchParams.set("scope", "openid email profile");
-  loginUrl.searchParams.set("redirect_uri", config.redirectUri);
-  window.location.assign(loginUrl.toString());
+  showLogin();
   return false;
-}
-
-// persistTokensFromHash はCognitoのimplicit flowで返るJWTをセッション内に保存します。
-function persistTokensFromHash(): void {
-  if (!window.location.hash.includes("id_token")) return;
-  const params = new URLSearchParams(window.location.hash.slice(1));
-  const idToken = params.get("id_token");
-  const accessToken = params.get("access_token");
-  if (idToken) sessionStorage.setItem("agentMonitorIdToken", idToken);
-  if (accessToken) sessionStorage.setItem("agentMonitorAccessToken", accessToken);
-  history.replaceState(null, document.title, window.location.pathname + window.location.search);
 }
 
 // authHeaders はAPI Gateway Cognito AuthorizerへIDトークンを渡します。
@@ -102,16 +89,80 @@ function authHeaders(): HeadersInit {
   return idToken ? { Authorization: `Bearer ${idToken}` } : {};
 }
 
-// logout はセッションを消し、Cognito Hosted UIのログアウトURLへ移動します。
+// login はCognitoの公開App Clientへ直接認証し、パスワードを保存せずJWTだけ保持します。
+async function login(event: SubmitEvent): Promise<void> {
+  event.preventDefault();
+  const config = window.AGENT_MONITOR_AUTH;
+  if (!config) return;
+
+  const username = byId<HTMLInputElement>("login-username").value.trim();
+  const password = byId<HTMLInputElement>("login-password").value;
+  const submit = byId<HTMLButtonElement>("login-submit");
+  const error = byId("login-error");
+  error.textContent = "";
+  submit.disabled = true;
+
+  try {
+    const response = await fetch(`https://cognito-idp.${config.region}.amazonaws.com/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-amz-json-1.1",
+        "X-Amz-Target": "AWSCognitoIdentityProviderService.InitiateAuth",
+      },
+      body: JSON.stringify({
+        AuthFlow: "USER_PASSWORD_AUTH",
+        ClientId: config.clientId,
+        AuthParameters: {
+          USERNAME: username,
+          PASSWORD: password,
+        },
+      }),
+    });
+    const body = await response.json();
+    if (!response.ok) {
+      throw new Error(body.message || body.__type || "ログインに失敗しました。");
+    }
+    if (body.ChallengeName) {
+      throw new Error("追加認証が必要です。Cognito側で初期パスワード変更を完了してください。");
+    }
+    const result = body.AuthenticationResult;
+    if (!result?.IdToken) {
+      throw new Error("IDトークンを取得できませんでした。");
+    }
+    sessionStorage.setItem("agentMonitorIdToken", result.IdToken);
+    if (result.AccessToken) sessionStorage.setItem("agentMonitorAccessToken", result.AccessToken);
+    if (result.RefreshToken) sessionStorage.setItem("agentMonitorRefreshToken", result.RefreshToken);
+    byId<HTMLFormElement>("login-form").reset();
+    showDashboard();
+    startDashboard();
+  } catch (caught) {
+    error.textContent = caught instanceof Error ? caught.message : "ログインに失敗しました。";
+  } finally {
+    submit.disabled = false;
+  }
+}
+
+// showLogin は未認証時にダッシュボードを隠してログイン画面だけを表示します。
+function showLogin(): void {
+  byId("login-screen").hidden = false;
+  byId("app-frame").hidden = true;
+}
+
+// showDashboard は認証後にログイン画面を隠して監視画面を表示します。
+function showDashboard(): void {
+  byId("login-screen").hidden = true;
+  byId("app-frame").hidden = false;
+}
+
+// logout はセッションを消し、画面内ログインへ戻します。
 function logout(): void {
   const config = window.AGENT_MONITOR_AUTH;
   sessionStorage.removeItem("agentMonitorIdToken");
   sessionStorage.removeItem("agentMonitorAccessToken");
+  sessionStorage.removeItem("agentMonitorRefreshToken");
   if (!config) return;
-  const logoutUrl = new URL(`${config.domain}/logout`);
-  logoutUrl.searchParams.set("client_id", config.clientId);
-  logoutUrl.searchParams.set("logout_uri", config.redirectUri);
-  window.location.assign(logoutUrl.toString());
+  if (refreshTimer) window.clearInterval(refreshTimer);
+  showLogin();
 }
 
 // render は数値カード、セッション状態、タイムラインをまとめて更新します。
@@ -268,10 +319,19 @@ byId<HTMLButtonElement>("refresh").addEventListener("click", () => {
 });
 
 byId<HTMLButtonElement>("logout").addEventListener("click", logout);
+byId<HTMLFormElement>("login-form").addEventListener("submit", (event) => {
+  void login(event);
+});
+
+// startDashboard はログイン直後と初期表示で同じ監視ループを開始します。
+function startDashboard(): void {
+  if (refreshTimer) window.clearInterval(refreshTimer);
+  void loadSnapshot();
+  refreshTimer = window.setInterval(() => void loadSnapshot(), 5000);
+}
 
 if (ensureAuthenticated()) {
-  void loadSnapshot();
-  setInterval(() => void loadSnapshot(), 5000);
+  startDashboard();
 }
 
 export {};

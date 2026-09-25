@@ -7,7 +7,35 @@
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
-    <div class="app-frame">
+    <section id="login-screen" class="login-screen" hidden>
+      <div class="login-shell">
+        <div class="login-brand">
+          <span class="brand-mark">AM</span>
+          <div>
+            <p class="eyebrow">自律開発モニター</p>
+            <h1>AI Agent Mission Control.</h1>
+          </div>
+        </div>
+        <form id="login-form" class="login-panel">
+          <div>
+            <p class="eyebrow">Secure sign in</p>
+            <h2>agent-monitor</h2>
+          </div>
+          <label>
+            <span>ユーザー名</span>
+            <input id="login-username" name="username" autocomplete="username" required />
+          </label>
+          <label>
+            <span>パスワード</span>
+            <input id="login-password" name="password" type="password" autocomplete="current-password" required />
+          </label>
+          <p id="login-error" class="login-error" role="alert"></p>
+          <button id="login-submit" type="submit">ログイン</button>
+        </form>
+      </div>
+    </section>
+
+    <div id="app-frame" class="app-frame" hidden>
       <aside class="sidebar" aria-label="workspace">
         <div class="brand">
           <span class="brand-mark">AM</span>

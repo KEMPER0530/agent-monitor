@@ -22,6 +22,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -46,6 +50,10 @@ button {
   cursor: pointer;
 }
 
+input {
+  font: inherit;
+}
+
 h1,
 h2,
 h3,
@@ -60,6 +68,103 @@ dd {
   /* 初期状態はスマホ向けの1カラムです。 */
   display: grid;
   min-height: 100vh;
+}
+
+.login-screen {
+  min-height: 100vh;
+  padding: 18px;
+}
+
+.login-shell {
+  display: grid;
+  gap: 18px;
+  margin: 0 auto;
+  max-width: 1080px;
+  min-height: calc(100vh - 36px);
+}
+
+.login-brand {
+  align-content: end;
+  display: grid;
+  gap: 16px;
+  padding: 24px 0 6px;
+}
+
+.login-brand .brand-mark {
+  height: 54px;
+  width: 54px;
+}
+
+.login-brand h1 {
+  font-size: clamp(38px, 12vw, 68px);
+  line-height: 0.98;
+  margin-top: 10px;
+  max-width: 720px;
+}
+
+.login-panel {
+  align-self: start;
+  background: rgba(19, 24, 32, 0.88);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+
+.login-panel h2 {
+  font-size: 28px;
+  line-height: 1.1;
+  margin-top: 8px;
+}
+
+.login-panel label {
+  display: grid;
+  gap: 8px;
+}
+
+.login-panel label span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.login-panel input {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  min-height: 46px;
+  outline: 0;
+  padding: 0 12px;
+  width: 100%;
+}
+
+.login-panel input:focus {
+  border-color: rgba(89, 166, 255, 0.74);
+  box-shadow: 0 0 0 4px rgba(89, 166, 255, 0.14);
+}
+
+.login-error {
+  color: var(--red);
+  font-size: 13px;
+  line-height: 1.5;
+  min-height: 20px;
+}
+
+#login-submit {
+  background: #eef4ff;
+  border: 0;
+  border-radius: 8px;
+  color: #071019;
+  font-weight: 900;
+  min-height: 46px;
+}
+
+#login-submit:disabled {
+  cursor: progress;
+  opacity: 0.62;
 }
 
 .sidebar,
@@ -522,6 +627,24 @@ dd {
 
   .app-frame {
     grid-template-columns: 280px minmax(0, 1fr);
+  }
+
+  .login-screen {
+    padding: 30px;
+  }
+
+  .login-shell {
+    align-items: center;
+    grid-template-columns: minmax(0, 1fr) 420px;
+    min-height: calc(100vh - 60px);
+  }
+
+  .login-brand {
+    padding: 0;
+  }
+
+  .login-panel {
+    padding: 24px;
   }
 
   .sidebar {
