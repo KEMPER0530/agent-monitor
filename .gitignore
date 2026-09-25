@@ -11,6 +11,8 @@ docs/
 /agent-monitor
 /server
 cdk.out/
+cdk.context.json
+infra/cdk.context.json
 infra/cdk.out/
 infra/node_modules/
 infra/package-lock.json

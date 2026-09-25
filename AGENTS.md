@@ -16,8 +16,8 @@
 ```bash
 export AGENT_MONITOR_ENABLED=true
 export AGENT_MONITOR_AGENT=codex
-export AGENT_MONITOR_API_URL=https://s3-agent-monitor.kemper0530.com
-export AGENT_MONITOR_API_KEY=<API Gatewayのingest API key>
+export AGENT_MONITOR_API_URL=<監視APIのURL>
+export AGENT_MONITOR_API_KEY=<エージェント登録用API Key>
 ```
 
 `.agent-monitor.env` が存在する場合、`cmd/agent-monitor` は起動時に自動で読み込みます。`.agent-monitor` が存在する場合も監視は有効です。
@@ -27,8 +27,8 @@ export AGENT_MONITOR_API_KEY=<API Gatewayのingest API key>
 AWS APIへ送る場合は、CognitoログインではなくAPI Gateway API Keyを使います。
 
 ```bash
-export AGENT_MONITOR_API_URL=https://s3-agent-monitor.kemper0530.com
-export AGENT_MONITOR_API_KEY=<API Gatewayのingest API key>
+export AGENT_MONITOR_API_URL=<監視APIのURL>
+export AGENT_MONITOR_API_KEY=<エージェント登録用API Key>
 ```
 
 `AGENT_MONITOR_API_URL` が未設定の場合、または `AGENT_MONITOR_API_KEY` が未設定の場合は、ローカルの `.agent-monitor-data/events.jsonl` に保存します。
