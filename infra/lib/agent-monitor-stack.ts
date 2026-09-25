@@ -7,11 +7,13 @@ import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as cognito from "aws-cdk-lib/aws-cognito";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
+import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as route53 from "aws-cdk-lib/aws-route53";
 import * as targets from "aws-cdk-lib/aws-route53-targets";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
+import * as s3n from "aws-cdk-lib/aws-s3-notifications";
 import { Construct } from "constructs";
 
 export class AgentMonitorStack extends cdk.Stack {
@@ -48,6 +50,11 @@ export class AgentMonitorStack extends cdk.Stack {
     const ingestFunctionName = configValue("ingestFunctionName", "AGENT_MONITOR_INGEST_FUNCTION_NAME");
     const ingestApiKeyName = configValue("ingestApiKeyName", "AGENT_MONITOR_INGEST_API_KEY_NAME");
     const ingestUsagePlanName = configValue("ingestUsagePlanName", "AGENT_MONITOR_INGEST_USAGE_PLAN_NAME");
+    const cacheUpdateFunctionName = configValue(
+      "cacheUpdateFunctionName",
+      "AGENT_MONITOR_CACHE_UPDATE_FUNCTION_NAME",
+      isLocalStack ? undefined : "cloudfront_cache_update",
+    );
 
     // CodexとClaudeのイベントは別テーブルに分け、誤混在を防ぎます。
     const codexTable = new dynamodb.Table(this, "CodexEventsTable", {
@@ -188,6 +195,25 @@ export class AgentMonitorStack extends cdk.Stack {
       defaultRootObject: "index.html",
     });
 
+    // S3のオブジェクト更新を契機に、該当パスのCloudFrontキャッシュを削除します。
+    const cacheUpdate = new lambda.Function(this, "CloudFrontCacheUpdateFunction", {
+      runtime: lambda.Runtime.NODEJS_24_X,
+      handler: "index.handler",
+      code: lambda.Code.fromAsset(path.join(__dirname, "../lambda/cloudfront-cache-update")),
+      timeout: Duration.seconds(30),
+      ...(cacheUpdateFunctionName ? { functionName: cacheUpdateFunctionName } : {}),
+      environment: {
+        DIST_ID: distribution.distributionId,
+      },
+    });
+    cacheUpdate.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["cloudfront:CreateInvalidation"],
+        resources: ["*"],
+      }),
+    );
+    siteBucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.LambdaDestination(cacheUpdate));
+
     if (hostedZone) {
       // 指定された公開ドメインをCloudFrontへ向けます。
       const recordName = dashboardDomain.replace(`.${zoneName}`, "");
@@ -236,6 +262,9 @@ export class AgentMonitorStack extends cdk.Stack {
     });
     new cdk.CfnOutput(this, "DistributionId", {
       value: distribution.distributionId,
+    });
+    new cdk.CfnOutput(this, "CloudFrontCacheUpdateFunctionName", {
+      value: cacheUpdate.functionName,
     });
     new cdk.CfnOutput(this, "CognitoClientId", {
       value: userPoolClient.ref,

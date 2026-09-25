@@ -199,6 +199,8 @@ npm run deploy:app
 3. `web/` を S3 に同期
 4. CloudFront のキャッシュを削除
 
+S3ダッシュボードバケットにはObjectCreatedイベント通知も設定します。S3上のファイルが更新されると、`cloudfront_cache_update` Lambda が対象パスのCloudFront invalidationを作成します。
+
 ## LocalStack
 
 LocalStack にも同じ CDK スタックをデプロイできます。
