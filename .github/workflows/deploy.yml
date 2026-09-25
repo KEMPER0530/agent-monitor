@@ -32,7 +32,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     env:
-      # AWS_ROLE_TO_ASSUMEが未設定ならデプロイだけをスキップしてCI失敗を避けます。
+      # main反映時は必ずAWSデプロイするため、ロール未設定は失敗として検知します。
       AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
       AWS_REGION: ${{ vars.AWS_REGION || 'ap-northeast-1' }}
       AGENT_MONITOR_ZONE_NAME: ${{ vars.AGENT_MONITOR_ZONE_NAME }}
@@ -48,19 +48,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Skip deploy when AWS role is not configured
+      - name: Validate AWS deploy role
         if: env.AWS_ROLE_TO_ASSUME == ''
-        run: echo "AWS_ROLE_TO_ASSUME is not set. Tests passed; deployment was skipped."
+        run: |
+          echo "::error::AWS_ROLE_TO_ASSUME secret is required for main deployments."
+          exit 1
       - uses: aws-actions/configure-aws-credentials@v4
-        if: env.AWS_ROLE_TO_ASSUME != ''
         with:
           role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
       - run: npm install
-        if: env.AWS_ROLE_TO_ASSUME != ''
         working-directory: infra
       - name: Deploy infrastructure once, then update app assets
-        if: env.AWS_ROLE_TO_ASSUME != ''
         run: |
           if aws cloudformation describe-stacks --stack-name AgentMonitorStack --region "${AWS_REGION}" >/dev/null 2>&1; then
             npm run deploy:app
