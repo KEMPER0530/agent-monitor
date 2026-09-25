@@ -240,4 +240,4 @@ CloudFront の対応範囲は LocalStack のエディションとバージョン
 - `AGENT_MONITOR_INGEST_API_KEY_NAME`
 - `AGENT_MONITOR_INGEST_USAGE_PLAN_NAME`
 
-`AWS_ROLE_TO_ASSUME` が未設定の場合、テスト後にデプロイジョブはスキップされます。
+`AWS_ROLE_TO_ASSUME` が未設定の場合、`main` のデプロイジョブは失敗します。S3へファイルがアップロードされないまま成功扱いにしないためです。
