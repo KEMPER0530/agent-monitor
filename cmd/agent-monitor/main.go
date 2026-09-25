@@ -11,7 +11,9 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/KEMPER0530/agent-monitor/internal/config"
 	"github.com/KEMPER0530/agent-monitor/internal/model"
@@ -52,6 +54,7 @@ func main() {
 	event.Tokens = *tokens
 	event.ToolCalls = *toolCalls
 	event.CostUSD = *costUSD
+	applyUsageDefaults(&event)
 
 	if err := store.NewJSONLStore(cfg.DataDir).Append(event); err != nil {
 		log.Fatal(err)
@@ -170,4 +173,58 @@ func envOrDefaultValue(value string, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+// applyUsageDefaults は明示的な使用量がない場合でも、ダッシュボードへ0以外の推定値を送ります。
+func applyUsageDefaults(event *model.Event) {
+	if event.Tokens <= 0 {
+		event.Tokens = envInt("AGENT_MONITOR_TOKENS", estimateTokens(event.Title, event.Message))
+	}
+	if event.ToolCalls <= 0 {
+		event.ToolCalls = envInt("AGENT_MONITOR_TOOL_CALLS", 1)
+	}
+	if event.CostUSD <= 0 {
+		event.CostUSD = envFloat("AGENT_MONITOR_COST_USD", estimateCostUSD(event.Tokens))
+	}
+}
+
+// estimateTokens は日本語を含む短文でも少なすぎないよう、文字数ベースで概算します。
+func estimateTokens(title string, message string) int {
+	runes := utf8.RuneCountInString(strings.TrimSpace(title + " " + message))
+	if runes == 0 {
+		return 1
+	}
+	tokens := (runes + 3) / 4
+	if tokens < 8 {
+		return 8
+	}
+	return tokens
+}
+
+// estimateCostUSD は画面上で0固定にならない最低限の概算コストを返します。
+func estimateCostUSD(tokens int) float64 {
+	if tokens <= 0 {
+		return 0.0001
+	}
+	cost := float64(tokens) * envFloat("AGENT_MONITOR_COST_PER_TOKEN_USD", 0.00001)
+	if cost < 0.0001 {
+		return 0.0001
+	}
+	return cost
+}
+
+func envInt(key string, fallback int) int {
+	value, err := strconv.Atoi(strings.TrimSpace(os.Getenv(key)))
+	if err != nil || value <= 0 {
+		return fallback
+	}
+	return value
+}
+
+func envFloat(key string, fallback float64) float64 {
+	value, err := strconv.ParseFloat(strings.TrimSpace(os.Getenv(key)), 64)
+	if err != nil || value <= 0 {
+		return fallback
+	}
+	return value
 }
