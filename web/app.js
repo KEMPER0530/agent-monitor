@@ -15,10 +15,23 @@ async function loadSnapshot() {
         cache: "no-store",
         headers: authHeaders(),
     });
+    if (response.status === 401 || response.status === 403) {
+        expireSession("セッションの有効期限が切れました。もう一度ログインしてください。");
+        return;
+    }
     if (!response.ok)
         throw new Error(`snapshot failed: ${response.status}`);
     currentSnapshot = await response.json();
     render(currentSnapshot);
+}
+// refreshDashboard はポーリング中の通信失敗をブラウザの未処理例外にしないための薄いラッパーです。
+async function refreshDashboard() {
+    try {
+        await loadSnapshot();
+    }
+    catch (caught) {
+        console.error(caught);
+    }
 }
 // ensureAuthenticated はS3公開時だけカスタムログイン画面を表示します。
 function ensureAuthenticated() {
@@ -28,9 +41,14 @@ function ensureAuthenticated() {
         byId("logout").hidden = true;
         return true;
     }
-    if (sessionStorage.getItem("agentMonitorIdToken")) {
+    const idToken = sessionStorage.getItem("agentMonitorIdToken");
+    if (idToken && !isJwtExpired(idToken)) {
         showDashboard();
         return true;
+    }
+    if (idToken) {
+        clearSession();
+        setLoginError("セッションの有効期限が切れました。もう一度ログインしてください。");
     }
     showLogin();
     return false;
@@ -108,14 +126,50 @@ function showDashboard() {
 // logout はセッションを消し、画面内ログインへ戻します。
 function logout() {
     const config = window.AGENT_MONITOR_AUTH;
-    sessionStorage.removeItem("agentMonitorIdToken");
-    sessionStorage.removeItem("agentMonitorAccessToken");
-    sessionStorage.removeItem("agentMonitorRefreshToken");
+    clearSession();
     if (!config)
         return;
     if (refreshTimer)
         window.clearInterval(refreshTimer);
     showLogin();
+}
+// clearSession は保存済みJWTをまとめて削除します。
+function clearSession() {
+    sessionStorage.removeItem("agentMonitorIdToken");
+    sessionStorage.removeItem("agentMonitorAccessToken");
+    sessionStorage.removeItem("agentMonitorRefreshToken");
+}
+// expireSession はAPI認証失敗時にポーリングを止め、ログイン画面へ戻します。
+function expireSession(message) {
+    clearSession();
+    if (refreshTimer)
+        window.clearInterval(refreshTimer);
+    showLogin();
+    setLoginError(message);
+}
+// setLoginError はログイン画面が存在する場合だけエラーを表示します。
+function setLoginError(message) {
+    const error = document.getElementById("login-error");
+    if (error)
+        error.textContent = message;
+}
+// isJwtExpired はCognito IDトークンのexpを見て期限切れを事前検知します。
+function isJwtExpired(token) {
+    try {
+        const payload = JSON.parse(decodeJwtPayload(token));
+        const expiresAt = typeof payload.exp === "number" ? payload.exp * 1000 : 0;
+        return expiresAt <= Date.now() + 30000;
+    }
+    catch {
+        return true;
+    }
+}
+// decodeJwtPayload はJWTのbase64urlペイロードをブラウザ標準APIで読める文字列へ戻します。
+function decodeJwtPayload(token) {
+    const payload = token.split(".")[1] || "";
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+    return atob(padded);
 }
 // render は数値カード、セッション状態、タイムラインをまとめて更新します。
 function render(snapshot) {
@@ -320,12 +374,12 @@ document.querySelectorAll(".agent-filter").forEach((button) => {
         currentAgent = button.dataset.agent || "codex";
         document.querySelectorAll(".agent-filter").forEach((item) => item.classList.remove("active"));
         button.classList.add("active");
-        void loadSnapshot();
+        void refreshDashboard();
     });
 });
 // 手動更新と自動更新の両方で同じ取得処理を使います。
 byId("refresh").addEventListener("click", () => {
-    void loadSnapshot();
+    void refreshDashboard();
 });
 byId("logout").addEventListener("click", logout);
 byId("login-form").addEventListener("submit", (event) => {
@@ -335,8 +389,8 @@ byId("login-form").addEventListener("submit", (event) => {
 function startDashboard() {
     if (refreshTimer)
         window.clearInterval(refreshTimer);
-    void loadSnapshot();
-    refreshTimer = window.setInterval(() => void loadSnapshot(), 5000);
+    void refreshDashboard();
+    refreshTimer = window.setInterval(() => void refreshDashboard(), 5000);
 }
 if (ensureAuthenticated()) {
     startDashboard();
