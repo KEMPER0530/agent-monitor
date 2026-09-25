@@ -24,3 +24,31 @@ def test_resolves_claude_table(monkeypatch):
 
     assert error is None
     assert table.name == "claude-table"
+
+
+# 同じtaskIdの作業が成功済みなら、実行中件数へ残さないことを確認します。
+def test_latest_task_events_replaces_running_with_success():
+    app = importlib.import_module("app")
+
+    latest = app.latest_task_events(
+        [
+            {"id": "1", "type": "task", "status": "running", "taskId": "task-1"},
+            {"id": "2", "type": "task", "status": "success", "taskId": "task-1"},
+        ]
+    )
+
+    assert latest["task-1"]["status"] == "success"
+
+
+# 同じtaskIdの質問が成功済みなら、未対応質問として残さないことを確認します。
+def test_latest_question_events_replaces_open_with_success():
+    app = importlib.import_module("app")
+
+    latest = app.latest_question_events(
+        [
+            {"id": "1", "type": "question", "status": "running", "taskId": "question-1"},
+            {"id": "2", "type": "question", "status": "success", "taskId": "question-1"},
+        ]
+    )
+
+    assert latest["question-1"]["status"] == "success"

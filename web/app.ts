@@ -293,6 +293,44 @@ function eventTypeLabel(type: string): string {
   return labels[type] || type;
 }
 
+// showHelp はカードの中で説明が切れないよう、共通の吹き出しを画面上に配置します。
+function showHelp(target: HTMLElement): void {
+  const tooltip = byId<HTMLDivElement>("tooltip-layer");
+  const message = target.dataset.help;
+  if (!message) return;
+
+  tooltip.textContent = message;
+  tooltip.hidden = false;
+
+  const targetRect = target.getBoundingClientRect();
+  const tooltipRect = tooltip.getBoundingClientRect();
+  const margin = 16;
+  const centeredLeft = targetRect.left + targetRect.width / 2 - tooltipRect.width / 2;
+  const left = Math.min(Math.max(margin, centeredLeft), window.innerWidth - tooltipRect.width - margin);
+  const belowTop = targetRect.bottom + 10;
+  const aboveTop = targetRect.top - tooltipRect.height - 10;
+  const top = belowTop + tooltipRect.height <= window.innerHeight - margin ? belowTop : Math.max(margin, aboveTop);
+
+  tooltip.style.left = `${left}px`;
+  tooltip.style.top = `${top}px`;
+}
+
+// hideHelp はhover/focusが外れた時に説明を閉じます。
+function hideHelp(): void {
+  byId("tooltip-layer").hidden = true;
+}
+
+// 初心者向け説明はマウス操作とキーボード操作の両方で読めるようにします。
+document.querySelectorAll<HTMLElement>("[data-help]").forEach((button) => {
+  button.addEventListener("mouseenter", () => showHelp(button));
+  button.addEventListener("focus", () => showHelp(button));
+  button.addEventListener("mouseleave", hideHelp);
+  button.addEventListener("blur", hideHelp);
+});
+
+window.addEventListener("scroll", hideHelp, { passive: true });
+window.addEventListener("resize", hideHelp);
+
 // フィルタ変更時は保存済みスナップショットを使い、再通信なしで表示だけ切り替えます。
 document.querySelectorAll<HTMLButtonElement>(".filter").forEach((button) => {
   button.addEventListener("click", () => {
