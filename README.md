@@ -11,31 +11,9 @@
 
 ## AWS構成図
 
-GitHub上では次のMermaid図を正とします。draw.ioファイルや生成画像はローカル確認用のため、`docs/` 配下に置いてもGit管理しません。
+<img width="1575" height="986" alt="aws-architecture svg" src="https://github.com/user-attachments/assets/7e97548e-41d6-4af6-b90a-982386418470" />
 
-```mermaid
-flowchart LR
-    user["利用者"] --> route53["Route53"]
-    route53 --> cloudfront["CloudFront"]
-    cloudfront --> s3["S3<br/>Dashboard"]
-    cloudfront --> apigw["API Gateway<br/>/api/*"]
 
-    user --> cognito["Cognito"]
-    cognito -- "JWT<br/>GET /api/snapshot" --> apigw
-
-    codexAgent["Codex / Claude<br/>自動送信"] --> apiKey["API Key"]
-    apiKey -- "x-api-key<br/>POST /api/events" --> apigw
-
-    apigw --> lambda["Lambda"]
-    lambda --> codexTable["DynamoDB<br/>Codex events"]
-    lambda --> claudeTable["DynamoDB<br/>Claude events"]
-
-    deploy["GitHub Actions<br/>main merge"] --> tests["テスト"]
-    tests --> deployapp["deploy:app"]
-    deployapp --> s3
-    deployapp --> lambda
-    deployapp --> cloudfront
-```
 
 実際のURL、User Pool、API Key、テーブル名などの環境固有値は公開READMEには載せず、AWS CDK context、GitHub Secrets、またはローカルの `.agent-monitor.env` で管理します。
 
