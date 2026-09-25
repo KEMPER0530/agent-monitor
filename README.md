@@ -18,6 +18,8 @@ draw.io 用の構成図ファイルは [docs/aws-architecture.drawio](docs/aws-a
 
 ![agent-monitor AWS構成図](docs/aws-architecture.png)
 
+AWSサービスアイコンは AWS Architecture Icons の公式パッケージから使用しています。
+
 ```mermaid
 flowchart LR
     user["利用者"] --> route53["Route53<br/>s3-agent-monitor.kemper0530.com"]

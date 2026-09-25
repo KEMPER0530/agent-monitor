@@ -1,131 +1,43 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
   <title id="title">agent-monitor AWS構成</title>
-  <desc id="desc">Route53、CloudFront、S3、API Gateway、Lambda、DynamoDB、Cognito、GitHub Actionsで構成するagent-monitorのAWS構成図</desc>
+  <desc id="desc">AWS公式アイコンを使ったagent-monitorのAWS構成図</desc>
   <defs>
-    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
-      <path d="M2,2 L10,6 L2,10 Z" fill="#334155"/>
-    </marker>
-    <marker id="arrow-purple" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
-      <path d="M2,2 L10,6 L2,10 Z" fill="#7c3aed"/>
-    </marker>
-    <marker id="arrow-green" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
-      <path d="M2,2 L10,6 L2,10 Z" fill="#16a34a"/>
-    </marker>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth"><path d="M2,2 L10,6 L2,10 Z" fill="#334155"/></marker>
+    <marker id="arrow-purple" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth"><path d="M2,2 L10,6 L2,10 Z" fill="#7c3aed"/></marker>
+    <marker id="arrow-green" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth"><path d="M2,2 L10,6 L2,10 Z" fill="#16a34a"/></marker>
     <style>
-      .title { font: 700 28px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #111827; }
-      .box-title { font: 700 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; text-anchor: middle; }
-      .box-sub { font: 700 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; text-anchor: middle; }
-      .label { font: 700 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #334155; text-anchor: middle; }
-      .line { stroke: #334155; stroke-width: 2; fill: none; marker-end: url(#arrow); }
-      .purple { stroke: #7c3aed; marker-end: url(#arrow-purple); }
-      .green { stroke: #16a34a; marker-end: url(#arrow-green); }
-      .gray { stroke: #475569; marker-end: url(#arrow); }
+      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#111827}.title{font-size:34px;font-weight:800}.box-title{font-size:20px;font-weight:800;text-anchor:middle}.box-sub{font-size:15px;font-weight:700;text-anchor:middle}.label{font-size:14px;font-weight:700;text-anchor:middle;fill:#334155}.node{rx:12;stroke-width:3}.line{stroke:#334155;stroke-width:3;fill:none;marker-end:url(#arrow)}.purple{stroke:#7c3aed;marker-end:url(#arrow-purple)}.green{stroke:#16a34a;marker-end:url(#arrow-green)}.gray{stroke:#475569;marker-end:url(#arrow)}
     </style>
   </defs>
+  <rect width="1600" height="1000" fill="#fff"/>
+  <image href="aws-icons/aws-cloud.svg" x="60" y="48" width="42" height="42"/>
+  <text x="112" y="83" class="title">agent-monitor AWS構成</text>
 
-  <rect width="1600" height="1000" fill="#ffffff"/>
-  <text x="60" y="70" class="title">agent-monitor AWS構成</text>
+  <g><rect class="node" x="70" y="180" width="150" height="70" fill="#e0f2fe" stroke="#0284c7"/><text x="145" y="222" class="box-title">利用者</text></g>
+  <g><rect class="node" x="300" y="170" width="260" height="90" fill="#eefcf8" stroke="#0f766e"/><image href="aws-icons/route53.svg" x="316" y="189" width="52" height="52"/><text x="464" y="207" class="box-title">Amazon Route 53</text><text x="464" y="234" class="box-sub">s3-agent-monitor.kemper0530.com</text></g>
+  <g><rect class="node" x="630" y="170" width="230" height="90" fill="#eef2ff" stroke="#4f46e5"/><image href="aws-icons/cloudfront.svg" x="646" y="189" width="52" height="52"/><text x="765" y="207" class="box-title">Amazon CloudFront</text><text x="765" y="234" class="box-sub">HTTPS / CDN</text></g>
+  <g><rect class="node" x="965" y="80" width="250" height="90" fill="#fff7ed" stroke="#d97706"/><image href="aws-icons/s3.svg" x="981" y="99" width="52" height="52"/><text x="1111" y="117" class="box-title">Amazon S3</text><text x="1111" y="144" class="box-sub">ダッシュボード配信</text></g>
+  <g><rect class="node" x="965" y="260" width="250" height="90" fill="#fdf2f8" stroke="#db2777"/><image href="aws-icons/apigateway.svg" x="981" y="279" width="52" height="52"/><text x="1111" y="297" class="box-title">Amazon API Gateway</text><text x="1111" y="324" class="box-sub">/api/*</text></g>
+  <g><rect class="node" x="620" y="360" width="250" height="90" fill="#f5f3ff" stroke="#7c3aed"/><image href="aws-icons/cognito.svg" x="636" y="379" width="52" height="52"/><text x="766" y="397" class="box-title">Amazon Cognito</text><text x="766" y="424" class="box-sub">nuxt-mail-demo</text></g>
+  <g><rect class="node" x="920" y="405" width="230" height="76" fill="#f8fafc" stroke="#475569"/><text x="1035" y="434" class="box-title">API Key</text><text x="1035" y="461" class="box-sub">自動イベント送信</text></g>
+  <g><rect class="node" x="1260" y="260" width="230" height="90" fill="#fff7ed" stroke="#ea580c"/><image href="aws-icons/lambda.svg" x="1276" y="279" width="52" height="52"/><text x="1395" y="297" class="box-title">AWS Lambda</text><text x="1395" y="324" class="box-sub">agent-monitor-ingest</text></g>
+  <g><rect class="node" x="1245" y="120" width="290" height="90" fill="#f0fdf4" stroke="#16a34a"/><image href="aws-icons/dynamodb.svg" x="1261" y="139" width="52" height="52"/><text x="1410" y="157" class="box-title">Amazon DynamoDB</text><text x="1410" y="184" class="box-sub">agent-monitor-codex-events</text></g>
+  <g><rect class="node" x="1245" y="410" width="290" height="90" fill="#f0fdf4" stroke="#16a34a"/><image href="aws-icons/dynamodb.svg" x="1261" y="429" width="52" height="52"/><text x="1410" y="447" class="box-title">Amazon DynamoDB</text><text x="1410" y="474" class="box-sub">agent-monitor-claude-events</text></g>
+  <g><rect class="node" x="300" y="650" width="230" height="80" fill="#f8fafc" stroke="#475569"/><text x="415" y="680" class="box-title">GitHub Actions</text><text x="415" y="708" class="box-sub">main merge</text></g>
+  <g><rect class="node" x="620" y="650" width="250" height="80" fill="#f8fafc" stroke="#475569"/><text x="745" y="680" class="box-title">テスト実行</text><text x="745" y="708" class="box-sub">Go / CDK / Web / Lambda</text></g>
+  <g><rect class="node" x="970" y="650" width="320" height="80" fill="#f8fafc" stroke="#475569"/><text x="1130" y="680" class="box-title">deploy:app</text><text x="1130" y="708" class="box-sub">S3同期 / Lambda更新 / CloudFront削除</text></g>
 
-  <g id="user">
-    <rect x="70" y="180" width="150" height="70" rx="8" fill="#e0f2fe" stroke="#0284c7" stroke-width="2"/>
-    <text x="145" y="221" class="box-title">利用者</text>
-  </g>
-
-  <g id="route53">
-    <rect x="300" y="180" width="230" height="70" rx="8" fill="#f0fdfa" stroke="#0f766e" stroke-width="2"/>
-    <text x="415" y="207" class="box-title">Route53</text>
-    <text x="415" y="231" class="box-sub">s3-agent-monitor.kemper0530.com</text>
-  </g>
-
-  <g id="cloudfront">
-    <rect x="610" y="180" width="190" height="70" rx="8" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
-    <text x="705" y="207" class="box-title">CloudFront</text>
-    <text x="705" y="231" class="box-sub">HTTPS / CDN</text>
-  </g>
-
-  <g id="s3">
-    <rect x="910" y="100" width="210" height="70" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
-    <text x="1015" y="127" class="box-title">S3</text>
-    <text x="1015" y="151" class="box-sub">ダッシュボード配信</text>
-  </g>
-
-  <g id="apigw">
-    <rect x="910" y="260" width="210" height="70" rx="8" fill="#fce7f3" stroke="#db2777" stroke-width="2"/>
-    <text x="1015" y="287" class="box-title">API Gateway</text>
-    <text x="1015" y="311" class="box-sub">/api/*</text>
-  </g>
-
-  <g id="cognito">
-    <rect x="610" y="350" width="190" height="70" rx="8" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
-    <text x="705" y="377" class="box-title">Cognito</text>
-    <text x="705" y="401" class="box-sub">nuxt-mail-demo</text>
-  </g>
-
-  <g id="api-key">
-    <rect x="875" y="390" width="210" height="70" rx="8" fill="#f8fafc" stroke="#475569" stroke-width="2"/>
-    <text x="980" y="417" class="box-title">API Key</text>
-    <text x="980" y="441" class="box-sub">自動イベント送信</text>
-  </g>
-
-  <g id="lambda">
-    <rect x="1220" y="260" width="220" height="70" rx="8" fill="#ffedd5" stroke="#ea580c" stroke-width="2"/>
-    <text x="1330" y="287" class="box-title">Lambda</text>
-    <text x="1330" y="311" class="box-sub">agent-monitor-ingest</text>
-  </g>
-
-  <g id="codex-table">
-    <rect x="1220" y="140" width="250" height="70" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
-    <text x="1345" y="167" class="box-title">DynamoDB</text>
-    <text x="1345" y="191" class="box-sub">agent-monitor-codex-events</text>
-  </g>
-
-  <g id="claude-table">
-    <rect x="1220" y="380" width="250" height="70" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
-    <text x="1345" y="407" class="box-title">DynamoDB</text>
-    <text x="1345" y="431" class="box-sub">agent-monitor-claude-events</text>
-  </g>
-
-  <g id="github">
-    <rect x="300" y="610" width="220" height="70" rx="8" fill="#f8fafc" stroke="#475569" stroke-width="2"/>
-    <text x="410" y="637" class="box-title">GitHub Actions</text>
-    <text x="410" y="661" class="box-sub">main merge</text>
-  </g>
-
-  <g id="tests">
-    <rect x="610" y="610" width="240" height="70" rx="8" fill="#f8fafc" stroke="#475569" stroke-width="2"/>
-    <text x="730" y="637" class="box-title">テスト実行</text>
-    <text x="730" y="661" class="box-sub">Go / CDK / Web / Lambda</text>
-  </g>
-
-  <g id="deploy">
-    <rect x="940" y="610" width="300" height="70" rx="8" fill="#f8fafc" stroke="#475569" stroke-width="2"/>
-    <text x="1090" y="637" class="box-title">deploy:app</text>
-    <text x="1090" y="661" class="box-sub">S3同期 / Lambda更新 / CloudFront削除</text>
-  </g>
-
-  <path class="line" d="M220 215 H300"/>
-  <path class="line" d="M530 215 H610"/>
-  <path class="line" d="M800 205 C850 185 865 145 910 135"/>
-  <text x="862" y="169" class="label">静的配信</text>
-  <path class="line" d="M800 225 C850 245 865 285 910 295"/>
-  <text x="860" y="273" class="label">API</text>
-  <path class="line purple" d="M220 250 C350 390 475 385 610 385"/>
-  <text x="410" y="358" class="label" fill="#7c3aed">ログイン</text>
-  <path class="line purple" d="M800 385 C850 360 870 315 910 300"/>
-  <text x="855" y="350" class="label" fill="#7c3aed">JWT検証</text>
-  <path class="line gray" d="M1085 425 C1145 400 1175 330 1220 305"/>
-  <text x="1160" y="378" class="label">x-api-key</text>
-  <path class="line" d="M1120 295 H1220"/>
-  <path class="line green" d="M1330 260 V210"/>
-  <text x="1384" y="238" class="label" fill="#16a34a">agent=codex</text>
-  <path class="line green" d="M1330 330 V380"/>
-  <text x="1384" y="361" class="label" fill="#16a34a">agent=claude</text>
-  <path class="line gray" d="M520 645 H610"/>
-  <path class="line gray" d="M850 645 H940"/>
-  <path class="line gray" d="M1090 610 C1075 455 1035 285 1015 170"/>
-  <text x="1040" y="382" class="label">S3更新</text>
-  <path class="line gray" d="M1240 610 C1300 540 1320 410 1330 330"/>
-  <text x="1293" y="500" class="label">Lambda更新</text>
-  <path class="line gray" d="M940 645 C760 600 710 350 705 250"/>
-  <text x="784" y="520" class="label">キャッシュ削除</text>
+  <path class="line" d="M220 215 H300"/><path class="line" d="M560 215 H630"/>
+  <path class="line" d="M860 205 C920 170 930 145 965 125"/><text x="924" y="162" class="label">静的配信</text>
+  <path class="line" d="M860 230 C920 275 930 295 965 305"/><text x="922" y="265" class="label">API</text>
+  <path class="line purple" d="M220 250 C360 410 485 405 620 405"/><text x="450" y="384" class="label" fill="#7c3aed">ログイン</text>
+  <path class="line purple" d="M870 405 C925 360 930 330 965 315"/><text x="910" y="352" class="label" fill="#7c3aed">JWT検証</text>
+  <path class="line gray" d="M1150 443 C1215 395 1225 340 1260 315"/><text x="1210" y="386" class="label">x-api-key</text>
+  <path class="line" d="M1215 305 H1260"/>
+  <path class="line green" d="M1375 260 V210"/><text x="1438" y="234" class="label" fill="#16a34a">agent=codex</text>
+  <path class="line green" d="M1375 350 V410"/><text x="1438" y="386" class="label" fill="#16a34a">agent=claude</text>
+  <path class="line gray" d="M530 690 H620"/><path class="line gray" d="M870 690 H970"/>
+  <path class="line gray" d="M1120 650 C1085 500 1075 300 1060 170"/><text x="1086" y="420" class="label">S3更新</text>
+  <path class="line gray" d="M1265 650 C1365 555 1375 500 1375 500"/><text x="1340" y="580" class="label">Lambda更新</text>
+  <path class="line gray" d="M970 690 C760 600 745 350 745 260"/><text x="800" y="535" class="label">キャッシュ削除</text>
 </svg>
