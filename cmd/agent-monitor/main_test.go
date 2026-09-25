@@ -25,3 +25,17 @@ func TestEventEndpointFromEventsURL(t *testing.T) {
 		t.Fatalf("endpoint = %s, want %s", got, want)
 	}
 }
+
+// export形式も読めるようにして、AGENTS.mdの設定例と実装を揃えます。
+func TestParseEnvLine(t *testing.T) {
+	key, value, ok := parseEnvLine(`export AGENT_MONITOR_AGENT="codex"`)
+	if !ok {
+		t.Fatal("expected env line to be parsed")
+	}
+	if key != "AGENT_MONITOR_AGENT" {
+		t.Fatalf("key = %s", key)
+	}
+	if value != "codex" {
+		t.Fatalf("value = %s", value)
+	}
+}

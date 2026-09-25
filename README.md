@@ -14,25 +14,39 @@ https://s3-agent-monitor.kemper0530.com
 
 ## AWS構成図
 
-draw.io 用の構成図ファイルは [docs/aws-architecture.drawio](docs/aws-architecture.drawio) にあります。
+GitHub上では次のMermaid図を正とします。draw.ioファイルや生成画像はローカル確認用のため、`docs/` 配下に置いてもGit管理しません。
 
 ```mermaid
 flowchart LR
-    user["利用者"] --> route53["Route53<br/>s3-agent-monitor.kemper0530.com"]
+    user["利用者"] --> route53["Route53"]
     route53 --> cloudfront["CloudFront"]
-    cloudfront --> s3["S3<br/>ダッシュボード配信"]
+    cloudfront --> s3["S3<br/>Dashboard"]
     cloudfront --> apigw["API Gateway<br/>/api/*"]
+
     user --> cognito["Cognito<br/>nuxt-mail-demo"]
-    cognito --> apigw
+    cognito -- "JWT<br/>GET /api/snapshot" --> apigw
+
+    codexAgent["Codex / Claude<br/>自動送信"] --> apiKey["API Key"]
+    apiKey -- "x-api-key<br/>POST /api/events" --> apigw
+
     apigw --> lambda["Lambda<br/>agent-monitor-ingest"]
-    lambda --> codex["DynamoDB<br/>agent-monitor-codex-events"]
-    lambda --> claude["DynamoDB<br/>agent-monitor-claude-events"]
+    lambda --> codexTable["DynamoDB<br/>Codex events"]
+    lambda --> claudeTable["DynamoDB<br/>Claude events"]
+
     deploy["GitHub Actions<br/>main merge"] --> tests["テスト"]
-    tests --> deployapp["S3/Lambda デプロイ<br/>CloudFront キャッシュ削除"]
+    tests --> deployapp["deploy:app"]
     deployapp --> s3
     deployapp --> lambda
     deployapp --> cloudfront
 ```
+
+主要な識別子:
+
+- 公開URL: `https://s3-agent-monitor.kemper0530.com`
+- Cognito User Pool: `nuxt-mail-demo` / `ap-northeast-1_7da4pYlPc`
+- Codexテーブル: `agent-monitor-codex-events`
+- Claudeテーブル: `agent-monitor-claude-events`
+- Ingest Lambda: `agent-monitor-ingest`
 
 ## ローカル起動
 
@@ -130,26 +144,54 @@ GET /api/snapshot?agent=claude
 
 本番APIは API Gateway の Cognito Authorizer で保護されています。`Authorization` ヘッダーに Cognito の ID トークンを `Bearer` 形式で渡します。
 
-ダッシュボードから利用する場合は、Cognito Hosted UI でログインすると `web/app.ts` が ID トークンを取得し、APIリクエストへ自動付与します。
+ダッシュボードから参照する場合は、Cognito Hosted UI でログインすると `web/app.ts` が ID トークンを取得し、スナップショット取得APIへ自動付与します。
 
-Codexから自動送信する場合は、`AGENTS.md` のルールに従って `cmd/agent-monitor` が実行されます。`AGENT_MONITOR_API_URL` と `AGENT_MONITOR_ID_TOKEN` が設定されていればAWS APIへ送信し、未設定ならローカルJSONLへ保存します。
+Codexから自動送信する場合は、CognitoログインではなくAPI Gateway API Keyを使います。`AGENTS.md` のルールに従って `cmd/agent-monitor` が実行され、`AGENT_MONITOR_API_URL` と `AGENT_MONITOR_API_KEY` が設定されていればAWS APIへ送信し、未設定ならローカルJSONLへ保存します。
 
 ```bash
 export AGENT_MONITOR_ENABLED=true
 export AGENT_MONITOR_AGENT=codex
 export AGENT_MONITOR_API_URL="https://s3-agent-monitor.kemper0530.com"
-export AGENT_MONITOR_ID_TOKEN="<Cognitoのid_token>"
+export AGENT_MONITOR_API_KEY="<API Gatewayのingest API key>"
 
 go run ./cmd/agent-monitor --type task --status running --title "Codex作業開始" --agent codex
 ```
 
-手元から `curl` する場合は、ブラウザでログイン後のURLフラグメントに含まれる `id_token` を使います。
+ローカルでは同じ内容を `.agent-monitor.env` に置くと、`cmd/agent-monitor` が起動時に自動で読み込みます。
+
+API KeyはAWS環境作成後に次のコマンドで取得します。
+
+```bash
+API_KEY_ID=$(aws cloudformation describe-stacks \
+  --stack-name AgentMonitorStack \
+  --region ap-northeast-1 \
+  --query "Stacks[0].Outputs[?OutputKey=='IngestApiKeyId'].OutputValue | [0]" \
+  --output text)
+
+aws apigateway get-api-key \
+  --api-key "$API_KEY_ID" \
+  --include-value \
+  --region ap-northeast-1 \
+  --query value \
+  --output text
+```
+
+手元からスナップショット取得APIを `curl` する場合は、ブラウザでログイン後のURLフラグメントに含まれる `id_token` を使います。
 
 スナップショット取得:
 
 ```bash
 curl -H "Authorization: Bearer ${AGENT_MONITOR_ID_TOKEN}" \
   "https://s3-agent-monitor.kemper0530.com/api/snapshot?agent=codex"
+```
+
+イベント登録APIを `curl` する場合はAPI Keyを使います。
+
+```bash
+curl -X POST "https://s3-agent-monitor.kemper0530.com/api/events?agent=codex" \
+  -H "x-api-key: ${AGENT_MONITOR_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"task","status":"running","title":"Codexの進捗確認","agent":"codex"}'
 ```
 
 ## テスト

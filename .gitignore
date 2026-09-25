@@ -3,8 +3,10 @@ bin/
 dist/
 node_modules/
 coverage/
+docs/
 .agent-monitor-data/
 .agent-monitor
+.agent-monitor.env
 .gocache/
 /agent-monitor
 /server
