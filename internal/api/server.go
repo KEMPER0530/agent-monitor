@@ -9,11 +9,13 @@ import (
 	"github.com/KEMPER0530/agent-monitor/internal/store"
 )
 
+// Server は静的ファイル配信と監視APIを同じHTTPサーバーで扱います。
 type Server struct {
 	store  store.EventStore
 	static http.Handler
 }
 
+// NewServer は依存する保存先を外から渡し、HTTP層を薄く保ちます。
 func NewServer(eventStore store.EventStore, staticDir string) http.Handler {
 	return &Server{
 		store:  eventStore,
@@ -21,6 +23,7 @@ func NewServer(eventStore store.EventStore, staticDir string) http.Handler {
 	}
 }
 
+// ServeHTTP はAPIパスとダッシュボード配信をルーティングします。
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.URL.Path == "/api/health":
@@ -36,6 +39,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handleSnapshot はUIがポーリングする現在状態を返します。
 func (s *Server) handleSnapshot(w http.ResponseWriter, r *http.Request) {
 	snapshot, err := s.store.Snapshot()
 	if err != nil {
@@ -45,6 +49,7 @@ func (s *Server) handleSnapshot(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, snapshot)
 }
 
+// handleEvent は外部から届いたイベントを保存します。
 func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	var event model.Event
@@ -65,13 +70,14 @@ func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, event)
 }
 
+// writeJSON はAPIレスポンス形式を統一します。
 func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
 }
 
+// writeError はエラーもJSONで返してUIやCLIから扱いやすくします。
 func writeError(w http.ResponseWriter, status int, err error) {
 	writeJSON(w, status, map[string]string{"error": err.Error()})
 }
-

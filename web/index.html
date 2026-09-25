@@ -7,61 +7,122 @@
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
-    <main class="shell">
-      <header class="topbar">
-        <div>
-          <h1>agent-monitor</h1>
-          <p id="last-updated">loading...</p>
+    <div class="app-frame">
+      <aside class="sidebar" aria-label="workspace">
+        <div class="brand">
+          <span class="brand-mark">AM</span>
+          <div>
+            <h1>agent-monitor</h1>
+            <p>ローカルAIエージェント監視</p>
+          </div>
         </div>
-        <button id="refresh" type="button">Refresh</button>
-      </header>
 
-      <section class="metrics" aria-label="summary">
-        <article>
-          <span>Events</span>
-          <strong id="metric-events">0</strong>
-        </article>
-        <article>
-          <span>Running</span>
-          <strong id="metric-running">0</strong>
-        </article>
-        <article>
-          <span>Failures</span>
-          <strong id="metric-failed">0</strong>
-        </article>
-        <article>
-          <span>Questions</span>
-          <strong id="metric-questions">0</strong>
-        </article>
-      </section>
-
-      <section class="workbench">
-        <aside class="costs">
-          <h2>Usage</h2>
-          <dl>
-            <div>
-              <dt>Cost</dt>
-              <dd id="metric-cost">$0.00</dd>
-            </div>
-            <div>
-              <dt>Tokens</dt>
-              <dd id="metric-tokens">0</dd>
-            </div>
-            <div>
-              <dt>Tool calls</dt>
-              <dd id="metric-tools">0</dd>
-            </div>
-          </dl>
-          <p id="last-message"></p>
-        </aside>
-
-        <section class="timeline">
-          <h2>Timeline</h2>
-          <div id="events" class="events" aria-live="polite"></div>
+        <section class="agent-card">
+          <div>
+            <span class="eyebrow">実行セッション</span>
+            <strong id="session-state">待機中</strong>
+          </div>
+          <span id="health-dot" class="health-dot idle"></span>
         </section>
-      </section>
-    </main>
+
+        <nav class="side-nav" aria-label="views">
+          <a class="active" href="/">概要</a>
+          <a href="#timeline">タイムライン</a>
+          <a href="#usage">使用量</a>
+        </nav>
+      </aside>
+
+      <main class="dashboard">
+        <header class="hero">
+          <div>
+            <p class="eyebrow">自律開発モニター</p>
+            <h2>AI Agent Mission Control.</h2>
+          </div>
+          <div class="toolbar">
+            <div class="agent-switch" aria-label="agent selector">
+              <button class="agent-filter active" type="button" data-agent="codex">Codex</button>
+              <button class="agent-filter" type="button" data-agent="claude">Claude</button>
+            </div>
+            <span id="last-updated">読み込み中...</span>
+            <button id="logout" class="logout-button" type="button">ログアウト</button>
+            <button id="refresh" type="button" aria-label="Refresh dashboard">
+              <span aria-hidden="true">↻</span>
+            </button>
+          </div>
+        </header>
+
+        <section class="metrics" aria-label="summary">
+          <article class="metric-card total">
+            <span>イベント</span>
+            <strong id="metric-events">0</strong>
+            <small id="event-note">イベントなし</small>
+          </article>
+          <article class="metric-card running">
+            <span>実行中</span>
+            <strong id="metric-running">0</strong>
+            <small>進行中のタスク</small>
+          </article>
+          <article class="metric-card failed">
+            <span>失敗</span>
+            <strong id="metric-failed">0</strong>
+            <small>確認が必要</small>
+          </article>
+          <article class="metric-card question">
+            <span>質問</span>
+            <strong id="metric-questions">0</strong>
+            <small>人間の判断待ち</small>
+          </article>
+        </section>
+
+        <section class="content-grid">
+          <section id="timeline" class="panel timeline-panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">ライブ履歴</p>
+                <h3>タイムライン</h3>
+              </div>
+              <div class="segmented" aria-label="status filter">
+                <button class="filter active" type="button" data-filter="all">すべて</button>
+                <button class="filter" type="button" data-filter="running">実行中</button>
+                <button class="filter" type="button" data-filter="failed">失敗</button>
+              </div>
+            </div>
+            <div id="events" class="events" aria-live="polite"></div>
+          </section>
+
+          <aside class="right-rail">
+            <section id="usage" class="panel usage-panel">
+              <div class="panel-head compact">
+                <div>
+                  <p class="eyebrow">消費状況</p>
+                  <h3>使用量</h3>
+                </div>
+              </div>
+              <dl class="usage-list">
+                <div>
+                  <dt>コスト</dt>
+                  <dd id="metric-cost">$0.00</dd>
+                </div>
+                <div>
+                  <dt>トークン</dt>
+                  <dd id="metric-tokens">0</dd>
+                </div>
+                <div>
+                  <dt>ツール実行</dt>
+                  <dd id="metric-tools">0</dd>
+                </div>
+              </dl>
+            </section>
+
+            <section class="panel signal-panel">
+              <p class="eyebrow">最新シグナル</p>
+              <p id="last-message">まだイベントはありません。</p>
+            </section>
+          </aside>
+        </section>
+      </main>
+    </div>
+    <script src="/auth-config.js"></script>
     <script src="/app.js" type="module"></script>
   </body>
 </html>
-
