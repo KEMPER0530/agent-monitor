@@ -16,9 +16,11 @@
 ```bash
 export AGENT_MONITOR_ENABLED=true
 export AGENT_MONITOR_AGENT=codex
+export AGENT_MONITOR_API_URL=https://s3-agent-monitor.kemper0530.com
+export AGENT_MONITOR_ID_TOKEN=<Cognitoのid_token>
 ```
 
-`.agent-monitor` が存在する場合も監視は有効です。
+`.agent-monitor.env` が存在する場合、`cmd/agent-monitor` は起動時に自動で読み込みます。`.agent-monitor` が存在する場合も監視は有効です。
 
 ## AWS APIへ送信する設定
 
@@ -29,7 +31,7 @@ export AGENT_MONITOR_API_URL=https://s3-agent-monitor.kemper0530.com
 export AGENT_MONITOR_ID_TOKEN=<Cognitoのid_token>
 ```
 
-`AGENT_MONITOR_API_URL` が未設定の場合は、ローカルの `.agent-monitor-data/events.jsonl` に保存します。
+`AGENT_MONITOR_API_URL` が未設定の場合、または `AGENT_MONITOR_ID_TOKEN` が未設定の場合は、ローカルの `.agent-monitor-data/events.jsonl` に保存します。
 
 ## 実行コマンド
 

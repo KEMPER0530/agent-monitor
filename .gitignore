@@ -5,6 +5,7 @@ node_modules/
 coverage/
 .agent-monitor-data/
 .agent-monitor
+.agent-monitor.env
 .gocache/
 /agent-monitor
 /server

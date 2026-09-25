@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/KEMPER0530/agent-monitor/internal/config"
@@ -21,6 +22,9 @@ func main() {
 	rootDir, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
+	}
+	if err := loadDotEnv(filepath.Join(rootDir, ".agent-monitor.env")); err != nil {
+		log.Printf(".agent-monitor.env skipped: %v", err)
 	}
 	cfg := config.Load(rootDir)
 
@@ -56,6 +60,48 @@ func main() {
 		log.Printf("remote monitor post skipped: %v", err)
 	}
 	fmt.Printf("recorded %s event for %s: %s\n", event.Type, event.Agent, event.Title)
+}
+
+// loadDotEnv はCodex実行時に必要なローカル専用の環境変数を読み込みます。
+func loadDotEnv(path string) error {
+	content, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	for _, line := range strings.Split(string(content), "\n") {
+		key, value, ok := parseEnvLine(line)
+		if !ok {
+			continue
+		}
+		if os.Getenv(key) == "" {
+			if err := os.Setenv(key, value); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// parseEnvLine はKEY=VALUEとexport KEY=VALUEのどちらも扱います。
+func parseEnvLine(line string) (string, string, bool) {
+	line = strings.TrimSpace(line)
+	if line == "" || strings.HasPrefix(line, "#") {
+		return "", "", false
+	}
+	line = strings.TrimPrefix(line, "export ")
+	key, value, found := strings.Cut(line, "=")
+	if !found {
+		return "", "", false
+	}
+	key = strings.TrimSpace(key)
+	value = strings.Trim(strings.TrimSpace(value), `"'`)
+	if key == "" {
+		return "", "", false
+	}
+	return key, value, true
 }
 
 // postRemote はAWS APIのURLが指定されている場合だけ、Cognito IDトークン付きでイベントを送ります。

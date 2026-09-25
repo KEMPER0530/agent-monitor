@@ -143,6 +143,8 @@ export AGENT_MONITOR_ID_TOKEN="<Cognitoのid_token>"
 go run ./cmd/agent-monitor --type task --status running --title "Codex作業開始" --agent codex
 ```
 
+ローカルでは同じ内容を `.agent-monitor.env` に置くと、`cmd/agent-monitor` が起動時に自動で読み込みます。
+
 手元から `curl` する場合は、ブラウザでログイン後のURLフラグメントに含まれる `id_token` を使います。
 
 スナップショット取得:
