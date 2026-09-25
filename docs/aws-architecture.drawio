@@ -25,6 +25,9 @@
         <mxCell id="cognito" value="Cognito&#xa;nuxt-mail-demo" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE9FE;strokeColor=#7C3AED;fontColor=#0F172A;fontSize=15;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="610" y="350" width="190" height="70" as="geometry"/>
         </mxCell>
+        <mxCell id="apiKey" value="API Key&#xa;自動イベント送信" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8FAFC;strokeColor=#475569;fontColor=#0F172A;fontSize=15;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="875" y="390" width="210" height="70" as="geometry"/>
+        </mxCell>
         <mxCell id="lambda" value="Lambda&#xa;agent-monitor-ingest" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFEDD5;strokeColor=#EA580C;fontColor=#0F172A;fontSize=15;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="1220" y="260" width="220" height="70" as="geometry"/>
         </mxCell>
@@ -59,6 +62,9 @@
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
         <mxCell id="e6" value="JWT検証" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=#7C3AED;fontSize=12;" edge="1" parent="1" source="cognito" target="apigw">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e6b" value="x-api-key" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=#475569;fontSize=12;" edge="1" parent="1" source="apiKey" target="lambda">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
         <mxCell id="e7" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=#334155;" edge="1" parent="1" source="apigw" target="lambda">

@@ -104,15 +104,15 @@ func parseEnvLine(line string) (string, string, bool) {
 	return key, value, true
 }
 
-// postRemote はAWS APIのURLが指定されている場合だけ、Cognito IDトークン付きでイベントを送ります。
+// postRemote はAWS APIのURLが指定されている場合だけ、API Key付きでイベントを送ります。
 func postRemote(event model.Event) error {
 	apiURL := strings.TrimSpace(os.Getenv("AGENT_MONITOR_API_URL"))
 	if apiURL == "" {
 		return nil
 	}
-	idToken := strings.TrimSpace(os.Getenv("AGENT_MONITOR_ID_TOKEN"))
-	if idToken == "" {
-		return fmt.Errorf("AGENT_MONITOR_ID_TOKEN is empty")
+	apiKey := strings.TrimSpace(os.Getenv("AGENT_MONITOR_API_KEY"))
+	if apiKey == "" {
+		return fmt.Errorf("AGENT_MONITOR_API_KEY is empty")
 	}
 
 	endpoint, err := eventEndpoint(apiURL, event.Agent)
@@ -128,7 +128,7 @@ func postRemote(event model.Event) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "Bearer "+idToken)
+	req.Header.Set("x-api-key", apiKey)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)

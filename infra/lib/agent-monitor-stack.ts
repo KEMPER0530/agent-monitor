@@ -83,25 +83,49 @@ export class AgentMonitorStack extends cdk.Stack {
       cognitoUserPools: [userPool],
     });
 
-    // API GatewayはCloudFrontからの/api/*を受け、Cognito認証後にLambdaへプロキシします。
+    // API Gatewayは参照系をCognito、登録系をAPI Keyで保護してLambdaへプロキシします。
     const api = new apigateway.RestApi(this, "AgentMonitorApi", {
       deployOptions: { stageName: "v1" },
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,
-        allowHeaders: ["Content-Type", "Authorization", "X-Amz-Date", "X-Api-Key", "X-Amz-Security-Token"],
+        allowHeaders: ["Content-Type", "Authorization", "x-api-key", "X-Api-Key", "X-Amz-Date", "X-Amz-Security-Token"],
       },
     });
     const apiResource = api.root.addResource("api");
     const events = apiResource.addResource("events");
-    events.addMethod("POST", new apigateway.LambdaIntegration(ingest), {
-      authorizationType: apigateway.AuthorizationType.COGNITO,
-      authorizer,
+    const postEventMethod = events.addMethod("POST", new apigateway.LambdaIntegration(ingest), {
+      apiKeyRequired: true,
     });
     const snapshot = apiResource.addResource("snapshot");
     snapshot.addMethod("GET", new apigateway.LambdaIntegration(ingest), {
       authorizationType: apigateway.AuthorizationType.COGNITO,
       authorizer,
+    });
+
+    // エージェントからの自動送信は会社PCでも使えるように、CognitoではなくAPI Keyで保護します。
+    const ingestApiKey = api.addApiKey("IngestApiKey", {
+      apiKeyName: "agent-monitor-ingest-key",
+    });
+    const ingestUsagePlan = api.addUsagePlan("IngestUsagePlan", {
+      name: "agent-monitor-ingest-usage-plan",
+      throttle: {
+        rateLimit: 5,
+        burstLimit: 10,
+      },
+    });
+    ingestUsagePlan.addApiKey(ingestApiKey);
+    ingestUsagePlan.addApiStage({
+      stage: api.deploymentStage,
+      throttle: [
+        {
+          method: postEventMethod,
+          throttle: {
+            rateLimit: 5,
+            burstLimit: 10,
+          },
+        },
+      ],
     });
 
     // ダッシュボードはS3に置き、公開はCloudFront経由に限定します。
@@ -206,6 +230,9 @@ export class AgentMonitorStack extends cdk.Stack {
     });
     new cdk.CfnOutput(this, "CognitoDomain", {
       value: `https://${cognitoDomainPrefix}.auth.${this.region}.amazoncognito.com`,
+    });
+    new cdk.CfnOutput(this, "IngestApiKeyId", {
+      value: ingestApiKey.keyId,
     });
   }
 }
