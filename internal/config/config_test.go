@@ -41,3 +41,14 @@ func TestIsEnabledDefaultsOff(t *testing.T) {
 		t.Fatal("expected monitoring to default off")
 	}
 }
+
+func TestDefaultServerBindsLoopback(t *testing.T) {
+	t.Setenv("AGENT_MONITOR_ADDR", "")
+	if addr := Load(t.TempDir()).Addr; addr != "127.0.0.1:8080" {
+		t.Fatalf("unsafe default address: %s", addr)
+	}
+	t.Setenv("AGENT_MONITOR_ADDR", "0.0.0.0:8080")
+	if addr := Load(t.TempDir()).Addr; addr != "0.0.0.0:8080" {
+		t.Fatalf("explicit address ignored: %s", addr)
+	}
+}

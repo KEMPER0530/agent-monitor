@@ -29,7 +29,7 @@ func Load(rootDir string) Config {
 		Enabled: IsEnabled(rootDir),
 		DataDir: envOrDefault("AGENT_MONITOR_DATA_DIR", filepath.Join(rootDir, DefaultDataDir)),
 		RootDir: rootDir,
-		Addr:    envOrDefault("AGENT_MONITOR_ADDR", ":8080"),
+		Addr:    envOrDefault("AGENT_MONITOR_ADDR", "127.0.0.1:8080"),
 	}
 }
 
