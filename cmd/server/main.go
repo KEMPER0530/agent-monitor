@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/KEMPER0530/agent-monitor/internal/api"
 	"github.com/KEMPER0530/agent-monitor/internal/config"
@@ -23,8 +24,9 @@ func main() {
 	}
 
 	handler := api.NewServer(store.NewJSONLStore(cfg.DataDir), "web")
-	log.Printf("agent-monitor dashboard: http://localhost%s", cfg.Addr)
-	if err := http.ListenAndServe(cfg.Addr, handler); err != nil {
+	log.Printf("agent-monitor dashboard: http://%s", cfg.Addr)
+	server := &http.Server{Addr: cfg.Addr, Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second}
+	if err := server.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
 }

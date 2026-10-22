@@ -2,7 +2,10 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/KEMPER0530/agent-monitor/internal/model"
@@ -25,6 +28,14 @@ func NewServer(eventStore store.EventStore, staticDir string) http.Handler {
 
 // ServeHTTP はAPIパスとダッシュボード配信をルーティングします。
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	if origin := r.Header.Get("Origin"); origin != "" {
+		parsed, err := url.Parse(origin)
+		if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || !strings.EqualFold(parsed.Host, r.Host) {
+			http.Error(w, "cross-origin request forbidden", http.StatusForbidden)
+			return
+		}
+	}
 	switch {
 	case r.URL.Path == "/api/health":
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -52,9 +63,20 @@ func (s *Server) handleSnapshot(w http.ResponseWriter, r *http.Request) {
 // handleEvent は外部から届いたイベントを保存します。
 func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	var event model.Event
-	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
-		writeError(w, http.StatusBadRequest, err)
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&event); err != nil {
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			writeError(w, http.StatusRequestEntityTooLarge, err)
+		} else {
+			writeError(w, http.StatusBadRequest, err)
+		}
+		return
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		writeError(w, http.StatusBadRequest, errors.New("expected a single JSON event"))
 		return
 	}
 	if event.ID == "" {

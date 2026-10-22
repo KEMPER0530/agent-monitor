@@ -242,3 +242,9 @@ CloudFront の対応範囲は LocalStack のエディションとバージョン
 - `AGENT_MONITOR_INGEST_USAGE_PLAN_NAME`
 
 `AWS_ROLE_TO_ASSUME` が未設定の場合、`main` のデプロイジョブは失敗します。S3へファイルがアップロードされないまま成功扱いにしないためです。
+
+## Local server security
+
+The local server binds to `127.0.0.1:8080` by default. It rejects cross-origin browser requests, caps incoming events at 1 MiB, and limits HTTP read/write time. The local API has no authentication: use only on a trusted local machine. If overriding `AGENT_MONITOR_ADDR` to expose it remotely, place it behind an authenticated TLS reverse proxy. The AWS API continues to use its existing authentication.
+
+Use Go 1.26.10 or later for local builds, and `npm ci` in `infra` to install the audited dependency lock.
