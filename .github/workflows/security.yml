@@ -11,10 +11,43 @@ permissions:
   pull-requests: read
   security-events: write
 
+concurrency:
+  group: security-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   codeql:
     name: CodeQL
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: go
+          build-mode: manual
+
+      - name: Build Go code for analysis
+        env:
+          CODEQL_EXTRACTOR_GO_BUILD_TRACING: "on"
+        run: go build ./cmd/... ./internal/...
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
+
+  codeql-javascript:
+    name: CodeQL JavaScript and TypeScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,10 +55,8 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
-          languages: go,javascript-typescript
-
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v4
+          languages: javascript-typescript
+          build-mode: none
 
       - name: Analyze
         uses: github/codeql-action/analyze@v4

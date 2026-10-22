@@ -1,5 +1,8 @@
 .PHONY: run test build cli cdk-synth localstack-up localstack-deploy
 
+# Bare make must finish; starting the server requires an explicit make run.
+.DEFAULT_GOAL := build
+
 run:
 	go run ./cmd/server
 
