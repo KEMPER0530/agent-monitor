@@ -30,6 +30,7 @@ const (
 // Event はCLI、ローカルAPI、AWS Lambdaで共通利用する監視データの単位です。
 type Event struct {
 	ID          string            `json:"id"`
+	SourceIP    string            `json:"sourceIp,omitempty"`
 	Type        EventType         `json:"type"`
 	Status      Status            `json:"status"`
 	Title       string            `json:"title"`

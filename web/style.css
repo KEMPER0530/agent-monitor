@@ -221,6 +221,18 @@ dd {
   color: var(--muted);
 }
 
+/* 削除操作は通常の履歴情報から離して誤操作を減らします。 */
+.event-delete {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--red);
+  min-height: 36px;
+  margin-top: 12px;
+  padding: 6px 12px;
+}
+.event-delete:disabled { opacity: 0.5; cursor: wait; }
+
 .brand p {
   font-size: 12px;
   margin-top: 3px;

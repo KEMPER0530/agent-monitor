@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -43,6 +44,17 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.handleSnapshot(w, r)
 	case r.URL.Path == "/api/events" && r.Method == http.MethodPost:
 		s.handleEvent(w, r)
+	case r.URL.Path == "/api/events" && r.Method == http.MethodDelete:
+		id := r.URL.Query().Get("eventKey")
+		if id == "" {
+			writeError(w, http.StatusBadRequest, errors.New("eventKey is required"))
+			return
+		}
+		if err := s.store.Delete(id); err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]bool{"deleted": true})
 	case strings.HasPrefix(r.URL.Path, "/api/"):
 		http.NotFound(w, r)
 	default:
@@ -81,6 +93,12 @@ func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 	}
 	if event.ID == "" {
 		event.ID = model.NewEvent(event.Type, event.Status, event.Title).ID
+	}
+	// ローカルでは直接接続した相手のIPを保存し、送信本文の自己申告値は上書きします。
+	host, _, _ := net.SplitHostPort(r.RemoteAddr)
+	event.SourceIP = ""
+	if ip := net.ParseIP(host); ip != nil {
+		event.SourceIP = ip.String()
 	}
 	if event.CreatedAt.IsZero() {
 		event.CreatedAt = model.NewEvent(event.Type, event.Status, event.Title).CreatedAt

@@ -1,6 +1,52 @@
 import importlib
 import json
 import os
+from unittest.mock import Mock
+
+
+# 本文や偽装ヘッダーを信用せず、CloudFrontで付与したIPだけを検証して採用します。
+def test_source_ip_trust_boundary(monkeypatch):
+    app = importlib.import_module("app")
+    monkeypatch.setenv("CLOUDFRONT_ORIGIN_SECRET", "test-secret")
+    event = {"requestContext": {"identity": {"sourceIp": "192.0.2.1"}},
+             "headers": {"X-Agent-Source-Ip": "2001:db8::1", "X-Forwarded-For": "198.51.100.9"}}
+    assert app.source_ip(event) == "192.0.2.1"
+    event["headers"]["X-Agent-Origin-Secret"] = "test-secret"
+    assert app.source_ip(event) == "2001:db8::1"
+    event["headers"]["X-Agent-Source-Ip"] = "invalid"
+    assert app.source_ip(event) == ""
+
+
+# 登録からスナップショットまでIPと個別削除キーが保持されることを確認します。
+def test_ip_persisted_and_returned(monkeypatch):
+    app = importlib.import_module("app")
+    table = Mock()
+    monkeypatch.setattr(app, "table_for_agent", lambda agent: (table, None))
+    result = app.create_event({"body": json.dumps({"title": "example", "sourceIp": "forged"}),
+                               "requestContext": {"identity": {"sourceIp": "192.0.2.3"}}})
+    assert result["statusCode"] == 201
+    item = table.put_item.call_args.kwargs["Item"]
+    assert item["sourceIp"] == "192.0.2.3"
+    table.query.return_value = {"Items": [item]}
+    event = json.loads(app.get_snapshot({})["body"])["events"][0]
+    assert event["sourceIp"] == "192.0.2.3"
+    assert event["eventKey"] == item["sk"]
+
+
+# APIキーだけの削除を拒否し、Cognito認証後に指定agentの1件だけを削除します。
+def test_delete_requires_auth_and_exact_key(monkeypatch):
+    app = importlib.import_module("app")
+    monkeypatch.setattr(app, "ENDPOINT_URL", None)
+    table = Mock()
+    monkeypatch.setattr(app, "table_for_agent", lambda agent: (table, None))
+    event = {"httpMethod": "DELETE", "queryStringParameters": {"agent": "claude", "eventKey": "123#id"}}
+    assert app.handler(event, None)["statusCode"] == 403
+    table.delete_item.assert_not_called()
+    event["requestContext"] = {"authorizer": {"claims": {"sub": "user"}}}
+    assert app.handler(event, None)["statusCode"] == 200
+    table.delete_item.assert_called_once_with(Key={"pk": "EVENT", "sk": "123#id"})
+    event["queryStringParameters"]["agent"] = "unknown"
+    assert app.handler(event, None)["statusCode"] == 400
 
 # タイトルなしイベントを拒否し、DynamoDBへ不完全なデータを保存しないことを確認します。
 def test_rejects_event_without_title(monkeypatch):

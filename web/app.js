@@ -247,6 +247,10 @@ function eventRow(event) {
         new Date(event.createdAt).toLocaleString(),
     ].join(" / ");
     body.append(head, meta);
+    const source = document.createElement("p");
+    source.className = "event-meta";
+    source.textContent = `送信元IP: ${event.sourceIp || "未取得"}`;
+    body.append(source);
     if (event.message) {
         const message = document.createElement("p");
         message.className = "message";
@@ -254,8 +258,39 @@ function eventRow(event) {
         body.append(message);
     }
     body.append(eventUsage(event));
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "event-delete";
+    remove.textContent = "削除";
+    remove.setAttribute("aria-label", `${event.title}を削除`);
+    remove.addEventListener("click", () => void deleteEvent(event, remove));
+    body.append(remove);
     article.append(rail, body);
     return article;
+}
+// 削除確認後に対象1件だけを削除し、集計と履歴を再取得します。
+async function deleteEvent(event, button) {
+    if (!window.confirm(`「${event.title}」の履歴を削除しますか？削除すると元に戻せません。`))
+        return;
+    button.disabled = true;
+    const agent = currentAgent;
+    try {
+        const query = new URLSearchParams({ agent, eventKey: event.eventKey || event.id });
+        const response = await fetch(`/api/events?${query}`, { method: "DELETE", headers: authHeaders() });
+        if (response.status === 401) {
+            expireSession("もう一度ログインしてください。");
+            return;
+        }
+        if (!response.ok)
+            throw new Error("履歴を削除できませんでした。時間をおいて再試行してください。");
+        await refreshDashboard();
+    }
+    catch (error) {
+        window.alert(error instanceof Error ? error.message : "履歴を削除できませんでした。");
+    }
+    finally {
+        button.disabled = false;
+    }
 }
 // eventUsage は履歴ごとの利用量とツール実行詳細を読みやすくまとめます。
 function eventUsage(event) {
