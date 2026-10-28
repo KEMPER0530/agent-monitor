@@ -205,15 +205,26 @@ function deriveSessionState(snapshot) {
 function renderEvents(events) {
     const container = byId("events");
     container.innerHTML = "";
+    // 開始記録は保持しつつ、同じタスクの完了が届いた場合は現在の状態を併記します。
+    const latest = new Map();
+    for (const event of events) {
+        if (event.type === "task" && event.taskId)
+            latest.set(`${event.agent || ""}:${event.taskId}`, event.status);
+    }
+    const displayStatus = (event) => {
+        if (event.type !== "task" || event.status !== "running" || !event.taskId)
+            return event.status;
+        return latest.get(`${event.agent || ""}:${event.taskId}`) || event.status;
+    };
     const filtered = [...events]
         .reverse()
-        .filter((event) => currentFilter === "all" || event.status === currentFilter);
+        .filter((event) => currentFilter === "all" || displayStatus(event) === currentFilter);
     if (filtered.length === 0) {
         container.append(emptyState());
         return;
     }
     for (const event of filtered) {
-        container.append(eventRow(event));
+        container.append(eventRow(event, displayStatus(event)));
     }
 }
 // emptyState はイベントがない場合もレイアウトを保つための表示です。
@@ -224,9 +235,9 @@ function emptyState() {
     return element;
 }
 // eventRow は1件のイベントを状態色付きの行として構築します。
-function eventRow(event) {
+function eventRow(event, displayStatus = event.status) {
     const article = document.createElement("article");
-    article.className = `event ${event.status}`;
+    article.className = `event ${displayStatus}`;
     const rail = document.createElement("div");
     rail.className = "event-rail";
     const body = document.createElement("div");
@@ -237,7 +248,9 @@ function eventRow(event) {
     title.textContent = event.title;
     const badge = document.createElement("span");
     badge.className = "status-badge";
-    badge.textContent = statusLabel(event.status);
+    badge.textContent = event.status === "running" && displayStatus !== "running"
+        ? `${displayStatus === "success" ? "完了済み" : statusLabel(displayStatus)}（開始記録）`
+        : statusLabel(event.status);
     head.append(title, badge);
     const meta = document.createElement("p");
     meta.className = "event-meta";
@@ -249,7 +262,9 @@ function eventRow(event) {
     body.append(head, meta);
     const source = document.createElement("p");
     source.className = "event-meta";
-    source.textContent = `送信元IP: ${event.sourceIp || "未取得"}`;
+    source.textContent = `送信元IP: ${event.sourceIp || "記録なし"}`;
+    if (!event.sourceIp)
+        source.title = "IP保存機能の導入前など、受信時にIPが保存されていない履歴です。過去のIPは復元できません。";
     body.append(source);
     if (event.message) {
         const message = document.createElement("p");
