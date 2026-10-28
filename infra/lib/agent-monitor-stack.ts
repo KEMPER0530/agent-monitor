@@ -14,6 +14,7 @@ import * as targets from "aws-cdk-lib/aws-route53-targets";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
 import * as s3n from "aws-cdk-lib/aws-s3-notifications";
+import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { Construct } from "constructs";
 
 export class AgentMonitorStack extends cdk.Stack {
@@ -73,6 +74,8 @@ export class AgentMonitorStack extends cdk.Stack {
     });
 
     // Lambdaはイベント登録とスナップショット取得の両方を担当する薄いAPI層です。
+    // CloudFrontで取得したIPヘッダーの出所を検証する共有値はAWS側で生成します。
+    const originSecret = new secretsmanager.Secret(this, "ApiOriginSecret");
     const ingest = new lambda.Function(this, "IngestFunction", {
       runtime: lambda.Runtime.PYTHON_3_12,
       handler: "app.handler",
@@ -80,6 +83,7 @@ export class AgentMonitorStack extends cdk.Stack {
       timeout: Duration.seconds(10),
       ...(ingestFunctionName ? { functionName: ingestFunctionName } : {}),
       environment: {
+        CLOUDFRONT_ORIGIN_SECRET: originSecret.secretValue.unsafeUnwrap(),
         CODEX_EVENTS_TABLE_NAME: codexTable.tableName,
         CLAUDE_EVENTS_TABLE_NAME: claudeTable.tableName,
         CODEX_MONITOR_ENABLED: "true",
@@ -120,6 +124,11 @@ export class AgentMonitorStack extends cdk.Stack {
       apiKeyRequired: true,
     });
     const snapshot = apiResource.addResource("snapshot");
+    // 履歴削除は登録用APIキーでは許可せず、画面ログインの認証を必須にします。
+    events.addMethod("DELETE", new apigateway.LambdaIntegration(ingest), {
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizer,
+    });
     snapshot.addMethod("GET", new apigateway.LambdaIntegration(ingest), {
       authorizationType: apigateway.AuthorizationType.COGNITO,
       authorizer,
@@ -173,6 +182,13 @@ export class AgentMonitorStack extends cdk.Stack {
       : undefined;
 
     // CloudFrontは静的UIとAPIを同一オリジン風に見せる入口です。
+    const viewerIp = new cloudfront.Function(this, "ViewerIpFunction", {
+      code: cloudfront.FunctionCode.fromInline(`function handler(event) {
+        var request = event.request;
+        request.headers['x-agent-source-ip'] = { value: event.viewer.ip };
+        return request;
+      }`),
+    });
     const distribution = new cloudfront.Distribution(this, "DashboardDistribution", {
       ...(certificate
         ? {
@@ -186,7 +202,10 @@ export class AgentMonitorStack extends cdk.Stack {
       },
       additionalBehaviors: {
         "/api/*": {
-          origin: new origins.RestApiOrigin(api),
+          origin: new origins.RestApiOrigin(api, {
+            customHeaders: { "x-agent-origin-secret": originSecret.secretValue.unsafeUnwrap() },
+          }),
+          functionAssociations: [{ function: viewerIp, eventType: cloudfront.FunctionEventType.VIEWER_REQUEST }],
           allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
           cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
           originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,

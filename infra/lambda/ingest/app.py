@@ -1,4 +1,6 @@
 import json
+import ipaddress
+import hmac
 import os
 import time
 import uuid
@@ -23,6 +25,8 @@ def handler(event, context):
         return create_event(event)
     if method == "GET":
         return get_snapshot(event)
+    if method == "DELETE":
+        return delete_event(event)
     return response(405, {"error": "method not allowed"})
 
 
@@ -50,6 +54,7 @@ def create_event(event):
         "agent": agent_key,
         "agentLabel": payload.get("agent", agent_key),
         "taskId": payload.get("taskId", ""),
+        "sourceIp": source_ip(event),
         "costUsd": Decimal(str(payload.get("costUsd", 0))),
         "tokens": int(payload.get("tokens", 0)),
         "toolCalls": int(payload.get("toolCalls", 0)),
@@ -60,6 +65,36 @@ def create_event(event):
         return response(400, {"error": "title is required"})
     table.put_item(Item=item)
     return response(201, normalize(item))
+
+
+# CloudFrontの共有値を検証してからviewer IPを採用し、直アクセスは接続情報を使います。
+def source_ip(event):
+    value = ((event.get("requestContext") or {}).get("identity") or {}).get("sourceIp", "")
+    headers = {key.lower(): val for key, val in (event.get("headers") or {}).items()}
+    expected = os.environ.get("CLOUDFRONT_ORIGIN_SECRET", "")
+    provided = headers.get("x-agent-origin-secret", "")
+    if expected and isinstance(provided, str) and hmac.compare_digest(expected, provided):
+        value = headers.get("x-agent-source-ip", "")
+    try:
+        return str(ipaddress.ip_address(value))
+    except (ValueError, TypeError):
+        return ""
+
+
+# 認証済みユーザーだけが、選択中agentの正確な保存キーを指定して1件削除できます。
+def delete_event(event):
+    claims = ((event.get("requestContext") or {}).get("authorizer") or {}).get("claims")
+    if not claims and not ENDPOINT_URL:
+        return response(403, {"error": "authentication required"})
+    agent = query_param(event, "agent")
+    key = query_param(event, "eventKey")
+    if agent not in ("codex", "claude") or not isinstance(key, str) or not key or len(key) > 1024:
+        return response(400, {"error": "agent and eventKey are required"})
+    table, error = table_for_agent(agent)
+    if error:
+        return error
+    table.delete_item(Key={"pk": "EVENT", "sk": key})
+    return response(200, {"deleted": True})
 
 
 # ダッシュボードが必要な集計値をagent別のDynamoDBテーブルから作ります。
@@ -158,6 +193,8 @@ def table_for_agent(agent):
 def normalize(item):
     return {
         "id": item.get("id", ""),
+        "eventKey": item.get("sk", ""),
+        "sourceIp": item.get("sourceIp", ""),
         "type": item.get("type", ""),
         "status": item.get("status", ""),
         "title": item.get("title", ""),

@@ -20,6 +20,7 @@ type EventStore interface {
 	Append(model.Event) error
 	List() ([]model.Event, error)
 	Snapshot() (model.Snapshot, error)
+	Delete(string) error
 }
 
 // JSONLStore はMVP用のファイルベース永続化です。
@@ -61,6 +62,43 @@ func (s *JSONLStore) Append(event model.Event) error {
 	return s.writeStateLocked()
 }
 
+// Delete は一時ファイルを置換して、対象以外の履歴を保持します。
+func (s *JSONLStore) Delete(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	events, err := s.listLocked()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(s.dir, 0755); err != nil {
+		return err
+	}
+	file, err := os.CreateTemp(s.dir, "events-*.tmp")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(file.Name())
+	encoder := json.NewEncoder(file)
+	deleted := false
+	for _, event := range events {
+		if event.ID == id && !deleted {
+			deleted = true
+			continue
+		}
+		if err := encoder.Encode(event); err != nil {
+			file.Close()
+			return err
+		}
+	}
+	if err := file.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(file.Name(), filepath.Join(s.dir, eventsFile)); err != nil {
+		return err
+	}
+	return s.writeStateLocked()
+}
+
 // List は保存済みイベントを作成時刻順で返します。
 func (s *JSONLStore) List() ([]model.Event, error) {
 	s.mu.Lock()
@@ -90,7 +128,7 @@ func (s *JSONLStore) listLocked() ([]model.Event, error) {
 	}
 	defer file.Close()
 
-	var events []model.Event
+	events := []model.Event{}
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		var event model.Event

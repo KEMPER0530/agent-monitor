@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -8,6 +9,46 @@ import (
 
 	"github.com/KEMPER0530/agent-monitor/internal/store"
 )
+
+// IPの偽装を上書きし、1件の削除後も他の履歴と集計を保持します。
+func TestSourceIPAndDelete(t *testing.T) {
+	server := NewServer(store.NewJSONLStore(t.TempDir()), "testdata")
+	for _, id := range []string{"one", "two"} {
+		req := httptest.NewRequest(http.MethodPost, "/api/events", strings.NewReader(`{"id":"`+id+`","type":"task","status":"success","title":"Example","sourceIp":"forged"}`))
+		req.RemoteAddr = "[2001:db8::1]:1234"
+		req.Header.Set("X-Forwarded-For", "198.51.100.1")
+		rec := httptest.NewRecorder()
+		server.ServeHTTP(rec, req)
+		if rec.Code != 201 {
+			t.Fatal(rec.Body.String())
+		}
+	}
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, httptest.NewRequest(http.MethodDelete, "/api/events?eventKey=one", nil))
+	if rec.Code != 200 {
+		t.Fatal(rec.Body.String())
+	}
+	rec = httptest.NewRecorder()
+	server.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/snapshot", nil))
+	var body struct {
+		Events []struct {
+			ID       string
+			SourceIP string `json:"sourceIp"`
+		}
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if len(body.Events) != 1 || body.Events[0].ID != "two" || body.Events[0].SourceIP != "2001:db8::1" {
+		t.Fatalf("snapshot: %s", rec.Body.String())
+	}
+	server.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodDelete, "/api/events?eventKey=two", nil))
+	rec = httptest.NewRecorder()
+	server.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/snapshot", nil))
+	if !strings.Contains(rec.Body.String(), `"events":[]`) {
+		t.Fatalf("empty snapshot: %s", rec.Body.String())
+	}
+}
 
 // HTTP経由でイベント登録し、同じサーバーから集計を取得できることを確認します。
 func TestPostEventAndSnapshot(t *testing.T) {
